@@ -189,15 +189,11 @@ function quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $time
                 throw new moodle_exception('notenoughrandomquestions', 'quiz',
                                            $quizobj->view_url(), $questiondata);
             }
+            add_used_random_question($USER->id, $quizobj->get_quizid(), $question->id);
         }
 
         $idstoslots[$i] = $quba->add_question($question, $questiondata->maxmark);
         $questionsinuse[] = $question->id;
-
-        prePrint($USER->id,"User ID");
-        prePrint($questiondata->category,"Category");
-        prePrint($question->id,"question ID");
-        prePrint($quizobj->get_quizid(),"QUIZ ID");
     }
 
     // Start all the questions.
@@ -232,11 +228,41 @@ function quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $time
 }
 
 /**
+ * Добавить новый использованный случайный вопрос или увеличить количество его использований.
+ * @param $userid Идентификатор пользователя, которому достался данный вопрос.
+ * @param $quizid Идентификатор теста, в котором испольовался данный вопрос.
+ * @param $questionid Идентификатор использованного вопроса.
+ * @param $categoryid Идентификатор категории использованного вопроса.
+ */
+function add_used_random_question($userid, $quizid, $questionid) {
+    global $DB;
+
+    // Ищем в таблице использованных вопросов полученный вопрос из указанного теста указанного пользователя
+    $question = $DB->get_record('quiz_used_questions',
+        array('question' => $questionid, 'user' => $userid, 'quiz' => $quizid));
+
+    if ($question) {                                            // Если такой вопрос уже есть
+        $question->amount++;                                    // Инкрементируем количество его использований
+        $DB->update_record('quiz_used_questions',$question);    // Обновляем его в БД
+    } else {            // Если такой вопрос раньше не использовался указанным пользователем в указанном тесте
+
+        // Создаем новую запись об использованном вопросе и добавляем ее в БД
+        $newquestion = new stdClass();
+        $newquestion->question = $questionid;
+        $newquestion->user = $userid;
+        $newquestion->quiz = $quizid;
+        $newquestion->amount = 0;
+
+        $DB->insert_record('quiz_used_questions',$newquestion);
+    }
+}
+
+/**
  * Отладочная печать указанной переменной с указанным сообщением
  * @param $smth Какая-то переменная, содержимое которой надо вывести
  * @param string $msg Поясняющее сообшение для вывода данных переменной
  */
-function prePrint($smth, $msg="") {
+function pre_print($smth, $msg="") {
 
     if ($msg != "") { echo "===== ".$msg.": =====<br/><br/>"; }
 
