@@ -160,6 +160,8 @@ function quiz_create_attempt(quiz $quizobj, $attemptnumber, $lastattempt, $timen
  */
 function quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $timenow,
                                 $questionids = array(), $forcedvariantsbyslot = array()) {
+    global $USER;
+
     // Fully load all the questions in this quiz.
     $quizobj->preload_questions();
     $quizobj->load_questions();
@@ -191,6 +193,11 @@ function quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $time
 
         $idstoslots[$i] = $quba->add_question($question, $questiondata->maxmark);
         $questionsinuse[] = $question->id;
+
+        prePrint($USER->id,"User ID");
+        prePrint($questiondata->category,"Category");
+        prePrint($question->id,"question ID");
+        prePrint($quizobj->get_quizid(),"QUIZ ID");
     }
 
     // Start all the questions.
@@ -222,6 +229,22 @@ function quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $time
     }
     $attempt->layout = implode(',', $newlayout);
     return $attempt;
+}
+
+/**
+ * Отладочная печать указанной переменной с указанным сообщением
+ * @param $smth Какая-то переменная, содержимое которой надо вывести
+ * @param string $msg Поясняющее сообшение для вывода данных переменной
+ */
+function prePrint($smth, $msg="") {
+
+    if ($msg != "") { echo "===== ".$msg.": =====<br/><br/>"; }
+
+    ?>
+        <pre>
+            <?print_r($smth);?>
+        </pre>
+    <?
 }
 
 /**
