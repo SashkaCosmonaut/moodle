@@ -160,8 +160,6 @@ function quiz_create_attempt(quiz $quizobj, $attemptnumber, $lastattempt, $timen
  */
 function quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $timenow,
                                 $questionids = array(), $forcedvariantsbyslot = array()) {
-    global $USER;
-
     // Fully load all the questions in this quiz.
     $quizobj->preload_questions();
     $quizobj->load_questions();
@@ -184,16 +182,22 @@ function quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $time
             }
 
             $question = question_bank::get_qtype('random')->choose_other_question(
-                $questiondata, $questionsinuse, $quizobj->get_quiz()->shuffleanswers, $forcequestionid);
+                $questiondata, $questionsinuse, $quizobj->get_quiz()->shuffleanswers, $forcequestionid, $quizobj->get_quizid());
             if (is_null($question)) {
                 throw new moodle_exception('notenoughrandomquestions', 'quiz',
                                            $quizobj->view_url(), $questiondata);
             }
-            add_used_random_question($USER->id, $quizobj->get_quizid(), $questiondata->category, $question->id);
+            add_used_random_question($quizobj->get_quizid(), $questiondata->category, $question->id);
         }
 
         $idstoslots[$i] = $quba->add_question($question, $questiondata->maxmark);
         $questionsinuse[] = $question->id;
+    }
+
+    // Если номер текущей попытки равен количеству попыток, т.е. все попытки использованы
+    if ($attempt->attempt == $quizobj->get_quiz()->attempts) {
+        // Удаляем упоминания обо всех вопросах, что использовались данным пользователем в данном тесте
+        delete_used_random_questions($quizobj->get_quizid());
     }
 
     // Start all the questions.
@@ -234,8 +238,10 @@ function quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $time
  * @param $categoryid Идентификатор категории использованного вопроса.
  * @param $questionid Идентификатор использованного вопроса.
  */
-function add_used_random_question($userid, $quizid, $categoryid, $questionid) {
-    global $DB;
+function add_used_random_question($quizid, $categoryid, $questionid) {
+    global $DB, $USER;
+
+    $userid = $USER->id;    // Получаем id текущего пользователя
 
     // Ищем в таблице использованных вопросов полученный вопрос из указанного теста указанного пользователя
     $question = $DB->get_record('quiz_used_questions1',
@@ -256,6 +262,16 @@ function add_used_random_question($userid, $quizid, $categoryid, $questionid) {
 
         $DB->insert_record('quiz_used_questions1', $newquestion);
     }
+}
+
+/**
+ * Удалить упоминания об использованных вопросах данного пользователя в данном тесте
+ * @param $quizid Идентификатор теста
+ */
+function delete_used_random_questions($quizid) {
+    global $DB, $USER;
+
+    $DB->delete_records('quiz_used_questions1', array('user' => $USER->id, 'quiz' => $quizid));
 }
 
 /**
