@@ -226,7 +226,8 @@ class qtype_random extends question_type {
      * @return question_definition|null the definition of the question that was
      *      selected, or null if no suitable question could be found.
      */
-    public function choose_other_question($questiondata, $excludedquestions, $allowshuffle = true, $forcequestionid = null) {
+    public function choose_other_question($questiondata, $excludedquestions, $allowshuffle = true,
+                                          $forcequestionid = null, $quizid = null) {
         $available = $this->get_available_questions_from_category($questiondata->category,
                 !empty($questiondata->questiontext));
         shuffle($available);
@@ -251,6 +252,49 @@ class qtype_random extends question_type {
             return $question;
         }
         return null;
+    }
+
+    /**
+     * Добавить новый использованный случайный вопрос или увеличить количество его использований.
+     * @param $userid Идентификатор пользователя, которому достался данный вопрос.
+     * @param $quizid Идентификатор теста, в котором испольовался данный вопрос.
+     * @param $categoryid Идентификатор категории использованного вопроса.
+     * @param $questionid Идентификатор использованного вопроса.
+     */
+    public function add_used_random_question($quizid, $categoryid, $questionid) {
+        global $DB, $USER;
+
+        $userid = $USER->id;    // Получаем id текущего пользователя
+
+        // Ищем в таблице использованных вопросов полученный вопрос из указанного теста указанного пользователя
+        $question = $DB->get_record('quiz_used_questions1',
+            array('user' => $userid, 'quiz' => $quizid, 'category' => $categoryid, 'question' => $questionid));
+
+        if ($question) {                                            // Если такой вопрос уже есть
+            $question->amount++;                                    // Инкрементируем количество его использований
+            $DB->update_record('quiz_used_questions1',$question);   // Обновляем его в БД
+        } else {            // Если такой вопрос раньше не использовался указанным пользователем в указанном тесте
+
+            // Создаем новую запись об использованном вопросе и добавляем ее в БД
+            $newquestion = new stdClass();
+            $newquestion->user = $userid;
+            $newquestion->quiz = $quizid;
+            $newquestion->question = $questionid;
+            $newquestion->category = $categoryid;
+            $newquestion->amount = 0;
+
+            $DB->insert_record('quiz_used_questions1', $newquestion);
+        }
+    }
+
+    /**
+     * Удалить упоминания об использованных вопросах данного пользователя в данном тесте
+     * @param $quizid Идентификатор теста
+     */
+    public function delete_used_random_questions($quizid) {
+        global $DB, $USER;
+
+        $DB->delete_records('quiz_used_questions1', array('user' => $USER->id, 'quiz' => $quizid));
     }
 
     public function get_random_guess_score($questiondata) {
