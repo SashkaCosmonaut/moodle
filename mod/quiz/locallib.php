@@ -195,6 +195,12 @@ function quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $time
         $questionsinuse[] = $question->id;
     }
 
+    // Если номер текущей попытки равен количеству попыток, т.е. все попытки использованы
+    if ($attempt->attempt == $quizobj->get_quiz()->attempts) {
+        // Удаляем упоминания обо всех вопросах, что использовались данным пользователем в данном тесте
+        delete_used_random_questions($quizobj->get_quizid());
+    }
+
     // Start all the questions.
     if ($attempt->preview) {
         $variantoffset = rand(1, 100);
@@ -256,6 +262,16 @@ function set_random_question_used($quizid, $categoryid, $questionid) {
 
         $DB->insert_record('quiz_used_questions1', $newquestion);
     }
+}
+
+/**
+ * Удалить упоминания об использованных вопросах данного пользователя в данном тесте.
+ * @param $quizid Идентификатор теста
+ */
+function delete_used_random_questions($quizid) {
+    global $DB, $USER;
+
+    $DB->delete_records('quiz_used_questions1', array('user' => $USER->id, 'quiz' => $quizid));
 }
 
 /**
