@@ -181,25 +181,16 @@ function quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $time
                 $forcequestionid = $questionids[$quba->next_slot_number()];
             }
 
-            $randomquestiontype = question_bank::get_qtype('random');
-
-            $question = $randomquestiontype->choose_other_question(
-                $questiondata, $questionsinuse, $quizobj->get_quiz()->shuffleanswers, $forcequestionid, $quizobj->get_quizid());
+            $question = question_bank::get_qtype('random')->choose_other_question(
+                $questiondata, $questionsinuse, $quizobj->get_quiz()->shuffleanswers, $forcequestionid);
             if (is_null($question)) {
                 throw new moodle_exception('notenoughrandomquestions', 'quiz',
                                            $quizobj->view_url(), $questiondata);
             }
-            $randomquestiontype->add_used_random_question($quizobj->get_quizid(), $questiondata->category, $question->id);
         }
 
         $idstoslots[$i] = $quba->add_question($question, $questiondata->maxmark);
         $questionsinuse[] = $question->id;
-    }
-
-    // Если номер текущей попытки равен количеству попыток, т.е. все попытки использованы
-    if ($attempt->attempt == $quizobj->get_quiz()->attempts) {
-        // Удаляем упоминания обо всех вопросах, что использовались данным пользователем в данном тесте
-        $randomquestiontype->delete_used_random_questions($quizobj->get_quizid());
     }
 
     // Start all the questions.
