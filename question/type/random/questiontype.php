@@ -226,9 +226,13 @@ class qtype_random extends question_type {
      * @return question_definition|null the definition of the question that was
      *      selected, or null if no suitable question could be found.
      */
-    public function choose_other_question($questiondata, $excludedquestions, $allowshuffle = true, $forcequestionid = null) {
-        $available = $this->get_available_questions_from_category($questiondata->category,
-                !empty($questiondata->questiontext));
+    public function choose_other_question($questiondata, $excludedquestions, $allowshuffle = true,
+                                          $forcequestionid = null, $quizid = null) {
+        global $DB;
+
+        $categoryid = $questiondata->category;  // Запоминаем категорию текущего вопроса
+
+        $available = $this->get_available_questions_from_category($categoryid, !empty($questiondata->questiontext));
         shuffle($available);
 
         if ($forcequestionid !== null) {
@@ -241,8 +245,31 @@ class qtype_random extends question_type {
             }
         }
 
+        $minamount = PHP_INT_MAX; // Минимальное кол-во повторений
+
+        // Получаем все вопросы данного теста данной категории
+        $usedquestions = $DB->get_records('quiz_used_questions1',
+            array('quiz' => $quizid, 'category' => $categoryid));
+
+        if ($usedquestions) {
+            // Ищем минимальное кол-во повторений среди всех полученных вопросов
+            foreach($usedquestions as $uq) {
+                if ($uq->amount < $minamount) {
+                    $minamount = $uq->amount;
+                }
+            }
+        }
+
         foreach ($available as $questionid) {
             if (in_array($questionid, $excludedquestions)) {
+                continue;
+            }
+
+            // Ищем данный вопрос среди уже использованных
+            $usedquestion = $DB->get_record('quiz_used_questions1', array('question' => $questionid));
+
+            // Если такой вопрос ранее использовался и вопрос не использовался реже всего
+            if ($usedquestion && count($usedquestions) == count($available) && $usedquestion->amount > $minamount) {
                 continue;
             }
 
