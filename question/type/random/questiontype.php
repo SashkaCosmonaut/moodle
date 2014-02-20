@@ -268,8 +268,9 @@ class qtype_random extends question_type {
             // Ищем данный вопрос среди уже использованных
             $usedquestion = $DB->get_record('quiz_used_questions1', array('question' => $questionid));
 
-            // Если такой вопрос ранее использовался и вопрос не использовался реже всего
-            if ($usedquestion && count($usedquestions) == count($available) && $usedquestion->amount > $minamount) {
+            // Если такой вопрос уже использовался и
+            // если еще есть доступные вопросы или, если нет, то данный вопрос не является самым редко используемым
+            if ($usedquestion && (count($usedquestions) != count($available) || $usedquestion->amount > $minamount)) {
                 continue;
             }
 
