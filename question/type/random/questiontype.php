@@ -228,7 +228,7 @@ class qtype_random extends question_type {
      */
     public function choose_other_question($questiondata, $excludedquestions, $allowshuffle = true,
                                           $forcequestionid = null, $quizid = null) {
-        global $DB;
+        global $DB, $USER;
 
         $categoryid = $questiondata->category;  // Запоминаем категорию текущего вопроса
 
@@ -247,9 +247,9 @@ class qtype_random extends question_type {
 
         $minamount = PHP_INT_MAX; // Минимальное кол-во повторений
 
-        // Получаем все вопросы данного теста данной категории
+        // Получаем все вопросы данного теста данной категории данного пользователя
         $usedquestions = $DB->get_records('quiz_used_questions1',
-            array('quiz' => $quizid, 'category' => $categoryid));
+            array('quiz' => $quizid, 'user' => $USER->id, 'category' => $categoryid));
 
         if ($usedquestions) {
             // Ищем минимальное кол-во повторений среди всех полученных вопросов
