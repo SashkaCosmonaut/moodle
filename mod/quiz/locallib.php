@@ -187,6 +187,8 @@ function quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $time
                 throw new moodle_exception('notenoughrandomquestions', 'quiz',
                                            $quizobj->view_url(), $questiondata);
             }
+
+            set_random_question_used($quizobj->get_quizid(), $questiondata->category, $question->id);
         }
 
         $idstoslots[$i] = $quba->add_question($question, $questiondata->maxmark);
@@ -222,6 +224,38 @@ function quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $time
     }
     $attempt->layout = implode(',', $newlayout);
     return $attempt;
+}
+
+/**
+ * Добавить новый использованный случайный вопрос или увеличить количество его использований.
+ * @param $quizid Идентификатор теста, в котором испольовался данный вопрос.
+ * @param $categoryid Идентификатор категории использованного вопроса.
+ * @param $questionid Идентификатор использованного вопроса.
+ */
+function set_random_question_used($quizid, $categoryid, $questionid) {
+    global $DB, $USER;
+
+    $userid = $USER->id;    // Получаем id текущего пользователя
+
+    // Ищем в таблице использованных вопросов полученный вопрос из указанного теста указанного пользователя
+    $question = $DB->get_record('quiz_used_questions1',
+        array('user' => $userid, 'quiz' => $quizid, 'category' => $categoryid, 'question' => $questionid));
+
+    if ($question) {                                            // Если такой вопрос уже есть
+        $question->amount++;                                    // Инкрементируем количество его использований
+        $DB->update_record('quiz_used_questions1',$question);   // Обновляем его в БД
+    } else {            // Если такой вопрос раньше не использовался указанным пользователем в указанном тесте
+
+        // Создаем новую запись об использованном вопросе и добавляем ее в БД
+        $newquestion = new stdClass();
+        $newquestion->user = $userid;
+        $newquestion->quiz = $quizid;
+        $newquestion->question = $questionid;
+        $newquestion->category = $categoryid;
+        $newquestion->amount = 0;
+
+        $DB->insert_record('quiz_used_questions1', $newquestion);
+    }
 }
 
 /**
