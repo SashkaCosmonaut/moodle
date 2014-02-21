@@ -245,17 +245,19 @@ class qtype_random extends question_type {
             }
         }
 
-        $minamount = PHP_INT_MAX; // Минимальное кол-во повторений
+        if ($quizid) {      // Если вообще необходимо учитывать использованные вопросы, т.е. передали id тесте
+            $minamount = PHP_INT_MAX; // Минимальное кол-во повторений
 
-        // Получаем все вопросы данного теста данной категории данного пользователя
-        $usedquestions = $DB->get_records('quiz_used_questions1',
-            array('quiz' => $quizid, 'user' => $USER->id, 'category' => $categoryid));
+            // Получаем все вопросы данного теста данной категории данного пользователя
+            $usedquestions = $DB->get_records('quiz_used_questions1',
+                array('quiz' => $quizid, 'user' => $USER->id, 'category' => $categoryid));
 
-        if ($usedquestions) {
-            // Ищем минимальное кол-во повторений среди всех полученных вопросов
-            foreach($usedquestions as $uq) {
-                if ($uq->amount < $minamount) {
-                    $minamount = $uq->amount;
+            if ($usedquestions) {
+                // Ищем минимальное кол-во повторений среди всех полученных вопросов
+                foreach($usedquestions as $uq) {
+                    if ($uq->amount < $minamount) {
+                        $minamount = $uq->amount;
+                    }
                 }
             }
         }
@@ -265,13 +267,16 @@ class qtype_random extends question_type {
                 continue;
             }
 
-            // Ищем данный вопрос среди уже использованных
-            $usedquestion = $DB->get_record('quiz_used_questions1', array('question' => $questionid));
+            if ($quizid) {      // Если вообще необходимо учитывать использованные вопросы, т.е. передали id тесте
+                // Ищем данный вопрос среди уже использованных
+                $usedquestion = $DB->get_record('quiz_used_questions1',
+                    array('question' => $questionid, 'quiz' => $quizid, 'user' => $USER->id));
 
-            // Если такой вопрос уже использовался и
-            // если еще есть доступные вопросы или, если нет, то данный вопрос не является самым редко используемым
-            if ($usedquestion && (count($usedquestions) != count($available) || $usedquestion->amount > $minamount)) {
-                continue;
+                // Если такой вопрос уже использовался и
+                // если еще есть доступные вопросы или, если нет, то данный вопрос не является самым редко используемым
+                if ($usedquestion && (count($usedquestions) != count($available) || $usedquestion->amount > $minamount)) {
+                    continue;
+                }
             }
 
             $question = question_bank::load_question($questionid, $allowshuffle);
