@@ -160,6 +160,8 @@ function quiz_create_attempt(quiz $quizobj, $attemptnumber, $lastattempt, $timen
  */
 function quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $timenow,
                                 $questionids = array(), $forcedvariantsbyslot = array()) {
+    global $USER;
+
     // Fully load all the questions in this quiz.
     $quizobj->preload_questions();
     $quizobj->load_questions();
@@ -182,20 +184,16 @@ function quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $time
             }
 
             $question = question_bank::get_qtype('random')->choose_other_question(
-                $questiondata, $questionsinuse, $quizobj->get_quiz()->shuffleanswers, $forcequestionid, $quizobj->get_quizid());
+                $questiondata, $questionsinuse, $quizobj->get_quiz()->shuffleanswers, $forcequestionid);
             if (is_null($question)) {
                 throw new moodle_exception('notenoughrandomquestions', 'quiz',
                                            $quizobj->view_url(), $questiondata);
             }
-
-            set_random_question_used($quizobj->get_quizid(), $questiondata->category, $question->id);
         }
 
         $idstoslots[$i] = $quba->add_question($question, $questiondata->maxmark);
         $questionsinuse[] = $question->id;
     }
-
-    try_to_delete_used_random_questions($quizobj->get_quizid());
 
     // Start all the questions.
     if ($attempt->preview) {
@@ -226,81 +224,6 @@ function quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $time
     }
     $attempt->layout = implode(',', $newlayout);
     return $attempt;
-}
-
-/**
- * Добавить новый использованный случайный вопрос или увеличить количество его использований.
- * @param $quizid Идентификатор теста, в котором испольовался данный вопрос.
- * @param $categoryid Идентификатор категории использованного вопроса.
- * @param $questionid Идентификатор использованного вопроса.
- */
-function set_random_question_used($quizid, $categoryid, $questionid) {
-    global $DB, $USER;
-
-    $userid = $USER->id;    // Получаем id текущего пользователя
-
-    // Ищем в таблице использованных вопросов полученный вопрос из указанного теста указанного пользователя
-    $question = $DB->get_record('quiz_used_questions1',
-        array('user' => $userid, 'quiz' => $quizid, 'category' => $categoryid, 'question' => $questionid));
-
-    if ($question) {                                            // Если такой вопрос уже есть
-        $question->amount++;                                    // Инкрементируем количество его использований
-        $DB->update_record('quiz_used_questions1',$question);   // Обновляем его в БД
-    } else {            // Если такой вопрос раньше не использовался указанным пользователем в указанном тесте
-
-        // Создаем новую запись об использованном вопросе и добавляем ее в БД
-        $newquestion = new stdClass();
-        $newquestion->user = $userid;
-        $newquestion->quiz = $quizid;
-        $newquestion->question = $questionid;
-        $newquestion->category = $categoryid;
-        $newquestion->amount = 0;
-
-        $DB->insert_record('quiz_used_questions1', $newquestion);
-    }
-}
-
-/**
- * Удалить упоминания об использованных вопросах данного пользователя в данном тесте.
- * @param $quizid Идентификатор теста
- */
-function try_to_delete_used_random_questions($quizid) {
-    global $DB, $USER;
-
-    // Выбираем все использованные категории из таблицы использованных вопросов данного пользователя в данном тесте
-    $categories = $DB->get_fieldset_sql(
-        'SELECT category FROM {quiz_used_questions1} WHERE user = :userid AND quiz = :quizid',
-        array('userid' => $USER->id, 'quizid' => $quizid));
-
-    $numberofcategories = array_count_values($categories);  // Определим каких категорий имеются вопросы
-
-    $uniquecategories = array_keys($numberofcategories);    // Массив всех встречавшихся категорий
-
-    $qtyperandom = question_bank::get_qtype('random');      // Объект случайного типа вопросов
-
-    // Перебираем все имеющиеся категории
-    foreach($uniquecategories as $category) {
-
-        // Если все вопросы данной категории уже были использованы и были занесены в БД
-        if ($numberofcategories[$category] == count($qtyperandom->get_available_questions_from_category($category, false))) {
-
-            // Удаляем вопросы данной категории, пользователя, теста, которые встречались один раз
-            $DB->delete_records('quiz_used_questions1',
-                array('user' => $USER->id, 'quiz' => $quizid, 'category' => $category, 'amount' => 0));
-
-            // Ищем те вопросы, которые все же успели повториться больше одного раза
-            $oftenusedquestions = $DB->get_records_select('quiz_used_questions1',
-                'user = :userid AND quiz = :quizid AND amount > 0',
-                array('userid' => $USER->id, 'quizid' => $quizid));
-
-            if ($oftenusedquestions) {  // Если такие вопросы есть
-                foreach ($oftenusedquestions as $uq) {
-                    $uq->amount = 0;                                // Устанавливаем, что они использовались единожды
-                    $DB->update_record('quiz_used_questions1',$uq); // Обновляем из в БД
-                }
-            }
-        }
-    }
 }
 
 /**

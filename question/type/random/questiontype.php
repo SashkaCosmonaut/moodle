@@ -226,13 +226,9 @@ class qtype_random extends question_type {
      * @return question_definition|null the definition of the question that was
      *      selected, or null if no suitable question could be found.
      */
-    public function choose_other_question($questiondata, $excludedquestions, $allowshuffle = true,
-                                          $forcequestionid = null, $quizid = null) {
-        global $DB, $USER;
-
-        $categoryid = $questiondata->category;  // Запоминаем категорию текущего вопроса
-
-        $available = $this->get_available_questions_from_category($categoryid, !empty($questiondata->questiontext));
+    public function choose_other_question($questiondata, $excludedquestions, $allowshuffle = true, $forcequestionid = null) {
+        $available = $this->get_available_questions_from_category($questiondata->category,
+                !empty($questiondata->questiontext));
         shuffle($available);
 
         if ($forcequestionid !== null) {
@@ -245,38 +241,9 @@ class qtype_random extends question_type {
             }
         }
 
-        if ($quizid) {      // Если вообще необходимо учитывать использованные вопросы, т.е. передали id тесте
-            $minamount = PHP_INT_MAX; // Минимальное кол-во повторений
-
-            // Получаем все вопросы данного теста данной категории данного пользователя
-            $usedquestions = $DB->get_records('quiz_used_questions1',
-                array('quiz' => $quizid, 'user' => $USER->id, 'category' => $categoryid));
-
-            if ($usedquestions) {
-                // Ищем минимальное кол-во повторений среди всех полученных вопросов
-                foreach($usedquestions as $uq) {
-                    if ($uq->amount < $minamount) {
-                        $minamount = $uq->amount;
-                    }
-                }
-            }
-        }
-
         foreach ($available as $questionid) {
             if (in_array($questionid, $excludedquestions)) {
                 continue;
-            }
-
-            if ($quizid) {      // Если вообще необходимо учитывать использованные вопросы, т.е. передали id тесте
-                // Ищем данный вопрос среди уже использованных
-                $usedquestion = $DB->get_record('quiz_used_questions1',
-                    array('question' => $questionid, 'quiz' => $quizid, 'user' => $USER->id));
-
-                // Если такой вопрос уже использовался и
-                // если еще есть доступные вопросы или, если нет, то данный вопрос не является самым редко используемым
-                if ($usedquestion && (count($usedquestions) != count($available) || $usedquestion->amount > $minamount)) {
-                    continue;
-                }
             }
 
             $question = question_bank::load_question($questionid, $allowshuffle);
