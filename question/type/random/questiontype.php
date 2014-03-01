@@ -246,7 +246,10 @@ class qtype_random extends question_type {
             }
         }
 
+        $minamount = 0;
         $uqids = array();
+        $uqidamounts = array();
+        $usedquestions = array();
 
         // Если передали идентификатор теста, т.е. нужно учитывать прежние вопросы
         if ($quizid) {
@@ -278,11 +281,17 @@ class qtype_random extends question_type {
 
                 pre_print($excludedquestions,"excludedquestions");
 
-                $uqids = array_merge($uqids,$excludedquestions);
+                //$uqids = array_merge($uqids,$excludedquestions);
 
                 pre_print($uqids,"uqids");
 
                 $uqidamounts = array_count_values($uqids);      // Количества использований вопросов с данными идентификаторами
+
+                pre_print($uqidamounts,"qidamounts");
+
+                foreach ($excludedquestions as $eq) {
+                    $uqidamounts[$eq] = PHP_INT_MAX;
+                }
 
                 pre_print($uqidamounts,"qidamounts");
 
@@ -297,14 +306,23 @@ class qtype_random extends question_type {
         }
 
         foreach ($available as $questionid) {
-            if (in_array($questionid, $excludedquestions)) {
+
+            pre_print(array_key_exists($questionid, $uqidamounts), "array_key_exists($questionid, uqidamounts)");
+            pre_print($uqidamounts[$questionid] != $minamount, "uqidamounts[$questionid] = $uqidamounts[$questionid] != $minamount");
+
+            if (in_array($questionid, $excludedquestions) ||
+               ($usedquestions && array_key_exists($questionid, $uqidamounts) && $uqidamounts[$questionid] != $minamount)) {
                 continue;
             }
+
+            pre_print($questionid,"CHOOSEN QUESTION");
 
             $question = question_bank::load_question($questionid, $allowshuffle);
             $this->set_selected_question_name($question, $questiondata->name);
             return $question;
         }
+
+        pre_print(null,"BAD EXIT");
         return null;
     }
 
