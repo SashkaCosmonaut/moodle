@@ -226,8 +226,13 @@ class qtype_random extends question_type {
      * @return question_definition|null the definition of the question that was
      *      selected, or null if no suitable question could be found.
      */
-    public function choose_other_question($questiondata, $excludedquestions, $allowshuffle = true, $forcequestionid = null) {
-        $available = $this->get_available_questions_from_category($questiondata->category,
+    public function choose_other_question($questiondata, $excludedquestions, $allowshuffle = true,
+                                          $forcequestionid = null, $quizid = null) {
+        global $DB, $USER;
+
+        $categoryid = $questiondata->category;
+
+        $available = $this->get_available_questions_from_category($categoryid,
                 !empty($questiondata->questiontext));
         shuffle($available);
 
@@ -239,6 +244,56 @@ class qtype_random extends question_type {
             } else {
                 throw new coding_exception('thisquestionidisnotavailable', $forcequestionid);
             }
+        }
+
+        $uqids = array();
+
+        // Если передали идентификатор теста, т.е. нужно учитывать прежние вопросы
+        if ($quizid) {
+            $query = "SELECT
+                        qa.id,
+                        qa.questionid,
+                        qn.category,
+                        quiza.userid,
+                        quiza.quiz
+
+                      FROM mdl_question_attempts qa
+                      JOIN mdl_question qn ON qn.id = qa.questionid
+                      JOIN mdl_quiz_attempts quiza ON quiza.uniqueid = qa.questionusageid
+
+                      WHERE qn.category = :categoryid AND
+                          quiza.userid = :userid AND
+                          quiza.quiz = :quizid
+                     ";
+
+            $usedquestions = $DB->get_records_sql($query,
+                array("categoryid" => $categoryid, "userid" => $USER->id, "quizid" => $quizid ));
+
+            pre_print($usedquestions,"usedquestions");
+
+            if ($usedquestions) {   // Если есть ранее использовавшиеся вопросы
+                foreach($usedquestions as $uq) { // Получаем идентификаторы всех использованных вопросов
+                    $uqids[] = $uq->questionid;
+                }
+
+                pre_print($excludedquestions,"excludedquestions");
+
+                $uqids = array_merge($uqids,$excludedquestions);
+
+                pre_print($uqids,"uqids");
+
+                $uqidamounts = array_count_values($uqids);      // Количества использований вопросов с данными идентификаторами
+
+                pre_print($uqidamounts,"qidamounts");
+
+                $minamount = min(array_values($uqidamounts));   // Определяем минимальное количество использований вопросов
+
+                pre_print($minamount,"minamount");
+            }
+        }
+
+        for($i = 0; $i < 10000; $i++) {
+            echo ".";
         }
 
         foreach ($available as $questionid) {
