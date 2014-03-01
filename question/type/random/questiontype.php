@@ -246,13 +246,16 @@ class qtype_random extends question_type {
             }
         }
 
-        $minamount = 0;
-        $uqids = array();
-        $uqidamounts = array();
-        $usedquestions = array();
+        $minamount = 0;             // Минимальное количество использований вопросов
+        $uqids = array();           // Идентификаторы использованных вопросов
+        $uqidamounts = array();     // Ассоциативный массив количеств использований вопросов
+        $usedquestions = array();   // Использованные вопросы, полученные из БД
 
         // Если передали идентификатор теста, т.е. нужно учитывать прежние вопросы
         if ($quizid) {
+
+            // Запрос в БД для получения вопросов указанной категории, которые
+            // были уже использованы в данном тесте данным пользователем
             $query = "SELECT
                         qa.id,
                         qa.questionid,
@@ -269,60 +272,40 @@ class qtype_random extends question_type {
                           quiza.quiz = :quizid
                      ";
 
+            // Получаем вопросы из БД при помощи сформаированного запроса
             $usedquestions = $DB->get_records_sql($query,
                 array("categoryid" => $categoryid, "userid" => $USER->id, "quizid" => $quizid ));
 
-            pre_print($usedquestions,"usedquestions");
-
-            if ($usedquestions) {   // Если есть ранее использовавшиеся вопросы
-                foreach($usedquestions as $uq) { // Получаем идентификаторы всех использованных вопросов
+            if ($usedquestions) {                   // Если есть ранее использовавшиеся вопросы
+                foreach($usedquestions as $uq) {    // Получаем идентификаторы всех использованных вопросов
                     $uqids[] = $uq->questionid;
                 }
 
-                pre_print($excludedquestions,"excludedquestions");
+                $uqidamounts = array_count_values($uqids);  // Количества использований вопросов с данными идентификаторами
 
-                //$uqids = array_merge($uqids,$excludedquestions);
-
-                pre_print($uqids,"uqids");
-
-                $uqidamounts = array_count_values($uqids);      // Количества использований вопросов с данными идентификаторами
-
-                pre_print($uqidamounts,"qidamounts");
-
+                // Добавляем в массив количесв уже исключенные из выборки вопросы с максимальным количеством
+                // использований, чтобы они не рассматривались при выборке использованных вопросов
                 foreach ($excludedquestions as $eq) {
                     $uqidamounts[$eq] = PHP_INT_MAX;
                 }
 
-                pre_print($uqidamounts,"qidamounts");
-
                 $minamount = min(array_values($uqidamounts));   // Определяем минимальное количество использований вопросов
-
-                pre_print($minamount,"minamount");
             }
-        }
-
-        for($i = 0; $i < 10000; $i++) {
-            echo ".";
         }
 
         foreach ($available as $questionid) {
+            if (in_array($questionid, $excludedquestions) ||    // Если данные вопросы уже исключены (выбраны, или не выбираются)
 
-            pre_print(array_key_exists($questionid, $uqidamounts), "array_key_exists($questionid, uqidamounts)");
-            pre_print($uqidamounts[$questionid] != $minamount, "uqidamounts[$questionid] = $uqidamounts[$questionid] != $minamount");
-
-            if (in_array($questionid, $excludedquestions) ||
-               ($usedquestions && array_key_exists($questionid, $uqidamounts) && $uqidamounts[$questionid] != $minamount)) {
-                continue;
+                // Или если уже есть использованные вопросы, и данный вопрос является таковым, и он использовался
+                // не минимальное количество раз (иначе его можно было бы выбрать)
+                ($usedquestions && array_key_exists($questionid, $uqidamounts) && $uqidamounts[$questionid] != $minamount)) {
+                continue;   // Пропускаем данный вопрос
             }
-
-            pre_print($questionid,"CHOOSEN QUESTION");
 
             $question = question_bank::load_question($questionid, $allowshuffle);
             $this->set_selected_question_name($question, $questiondata->name);
             return $question;
         }
-
-        pre_print(null,"BAD EXIT");
         return null;
     }
 
