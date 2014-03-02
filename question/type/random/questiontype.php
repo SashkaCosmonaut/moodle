@@ -232,8 +232,7 @@ class qtype_random extends question_type {
 
         $categoryid = $questiondata->category;
 
-        $available = $this->get_available_questions_from_category($categoryid,
-                !empty($questiondata->questiontext));
+        $available = $this->get_available_questions_from_category($categoryid, !empty($questiondata->questiontext));
         shuffle($available);
 
         if ($forcequestionid !== null) {
