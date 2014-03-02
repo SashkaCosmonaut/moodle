@@ -295,6 +295,7 @@ class qtype_random extends question_type {
                 $minamount = min(array_values($uqidamounts));   // Определяем минимальное количество использований вопросов
             }
         }
+
         foreach ($available as $questionid) {
             if (in_array($questionid, $excludedquestions) ||    // Если данный вопрос уже исключен из выбюорки
 
@@ -302,7 +303,7 @@ class qtype_random extends question_type {
                 (count($available) > count($uqidamounts) && array_key_exists($questionid, $uqidamounts)) ||
 
                 // Или были использованы все доступные вопросы,
-                // а данный вопрос использовался не минимальное количество раз (иначе его можно было бы выбрать)
+                // а данный вопрос использовался не минимальное количество раз (иначе его можно выбрать)
                 (count($available) <= count($uqidamounts) && $uqidamounts[$questionid] != $minamount)) {
                 continue;   // Пропускаем данный вопрос
             }
