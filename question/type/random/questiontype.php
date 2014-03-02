@@ -232,10 +232,6 @@ class qtype_random extends question_type {
 
         $categoryid = $questiondata->category;
 
-        for ($i = 0; $i < 10; $i++) {
-            echo '.';
-        }
-
         $available = $this->get_available_questions_from_category($categoryid, !empty($questiondata->questiontext));
         shuffle($available);
 
@@ -252,11 +248,9 @@ class qtype_random extends question_type {
         $minamount = 0;             // Минимальное количество использований вопросов
         $uqids = array();           // Идентификаторы использованных вопросов
         $uqidamounts = array();     // Ассоциативный массив количеств использований вопросов
-        //$usedquestions = array();   // Использованные вопросы, полученные из БД
 
         // Если передали идентификатор теста, т.е. нужно учитывать прежние вопросы
         if ($quizid) {
-
             // Запрос в БД для получения вопросов указанной категории, которые
             // были уже использованы в данном тесте данным пользователем
             $query = "SELECT
@@ -279,24 +273,16 @@ class qtype_random extends question_type {
             $usedquestions = $DB->get_records_sql($query,
                 array("categoryid" => $categoryid, "userid" => $USER->id, "quizid" => $quizid ));
 
-            pre_print($usedquestions, "usedquestions");
-
             if ($usedquestions) {                   // Если есть ранее использовавшиеся вопросы
                 foreach($usedquestions as $uq) {    // Получаем идентификаторы всех использованных вопросов
                     $uqids[] = $uq->questionid;
                 }
 
-                pre_print($uqids, "uqids");
-
                 $uqidamounts = array_count_values($uqids);  // Количества использований вопросов с данными идентификаторами
-
-                pre_print($uqidamounts, "uqidamounts");
 
                 // Получаем все имеющиеся вопросы данной категории
                 $questionsandcategories = $DB->get_records_menu('question',
                     array('category' => $categoryid, 'parent' => 0));
-
-                pre_print($questionsandcategories, "questionsandcategories");
 
                 // Добавляем в массив количесв уже исключенные из выборки вопросы текущей категории с максимальным
                 // количеством использований, чтобы они не рассматривались при выборке использованных вопросов
@@ -306,29 +292,10 @@ class qtype_random extends question_type {
                     }
                 }
 
-                pre_print($uqidamounts, "uqidamounts");
-
                 $minamount = min(array_values($uqidamounts));   // Определяем минимальное количество использований вопросов
-
-                pre_print($minamount, "minamount");
             }
         }
-
-        pre_print($excludedquestions, "excludedquestions");
-
-        pre_print($available, "available");
-
         foreach ($available as $questionid) {
-
-            pre_print(array_key_exists($questionid, $uqidamounts),
-                "array_key_exists($questionid, uqidamounts)");
-
-            pre_print(count($available) > count($uqidamounts),
-                "count(available) (".count($available).") > count(uqids) (".count($uqidamounts).")");
-
-            pre_print($uqidamounts[$questionid] != $minamount,
-                "uqidamounts[$questionid] = $uqidamounts[$questionid] != $minamount");
-
             if (in_array($questionid, $excludedquestions) ||    // Если данный вопрос уже исключен из выбюорки
 
                 // Или если данный вопрос уже использовался, а доступные вопроосы еще есть
@@ -337,19 +304,14 @@ class qtype_random extends question_type {
                 // Или были использованы все доступные вопросы,
                 // а данный вопрос использовался не минимальное количество раз (иначе его можно было бы выбрать)
                 (count($available) <= count($uqidamounts) && $uqidamounts[$questionid] != $minamount)) {
-
-                pre_print($questionid, "CANCELED:");
                 continue;   // Пропускаем данный вопрос
             }
-
-            pre_print($questionid, "CONFIRMED:");
 
             $question = question_bank::load_question($questionid, $allowshuffle);
             $this->set_selected_question_name($question, $questiondata->name);
             return $question;
         }
 
-        pre_print("BAD EXIT");
         return null;
     }
 
