@@ -253,25 +253,27 @@ class qtype_random extends question_type {
         if ($quizid) {
             // Запрос в БД для получения вопросов указанной категории, которые
             // были уже использованы в данном тесте данным пользователем
-            $query = "SELECT
+            $query = "
+                    SELECT
                         qa.id,
                         qa.questionid,
                         qn.category,
                         quiza.userid,
                         quiza.quiz
 
-                      FROM mdl_question_attempts qa
-                      JOIN mdl_question qn ON qn.id = qa.questionid
-                      JOIN mdl_quiz_attempts quiza ON quiza.uniqueid = qa.questionusageid
+                    FROM {question_attempts} qa
+                    JOIN {question} qn ON qn.id = qa.questionid
+                    JOIN {quiz_attempts} quiza ON quiza.uniqueid = qa.questionusageid
 
-                      WHERE qn.category = :categoryid AND
-                          quiza.userid = :userid AND
-                          quiza.quiz = :quizid
-                     ";
+                    WHERE qn.category = :categoryid AND
+                        quiza.userid = :userid AND
+                        quiza.quiz = :quizid";
 
             // Получаем вопросы из БД при помощи сформаированного запроса
-            $usedquestions = $DB->get_records_sql($query,
-                array("categoryid" => $categoryid, "userid" => $USER->id, "quizid" => $quizid ));
+            $usedquestions = $DB->get_records_sql($query, array(
+                'categoryid' => $categoryid,
+                'userid'     => $USER->id,
+                'quizid'     => $quizid ));
 
             if ($usedquestions) {                   // Если есть ранее использовавшиеся вопросы
                 foreach($usedquestions as $uq) {    // Получаем идентификаторы всех использованных вопросов
@@ -281,8 +283,9 @@ class qtype_random extends question_type {
                 $uqidamounts = array_count_values($uqids);  // Количества использований вопросов с данными идентификаторами
 
                 // Получаем все имеющиеся вопросы данной категории
-                $questionsandcategories = $DB->get_records_menu('question',
-                    array('category' => $categoryid, 'parent' => 0));
+                $questionsandcategories = $DB->get_records_menu('question', array(
+                    'category'  => $categoryid,
+                    'parent'    => 0));
 
                 // Добавляем в массив количесв уже исключенные из выборки вопросы текущей категории с максимальным
                 // количеством использований, чтобы они не рассматривались при выборке использованных вопросов
@@ -297,14 +300,14 @@ class qtype_random extends question_type {
         }
 
         foreach ($available as $questionid) {
-            if (in_array($questionid, $excludedquestions) ||    // Если данный вопрос уже исключен из выбюорки
 
-                // Или если данный вопрос уже использовался, а доступные вопроосы еще есть
-                (count($available) > count($uqidamounts) && array_key_exists($questionid, $uqidamounts)) ||
+            $isqidexcluded = in_array($questionid, $excludedquestions);      // Если данный вопрос уже исключен из выбюорки
+            $isqidused = array_key_exists($questionid, $uqidamounts);        // Или если данный вопрос уже использовался
+            $areavailableqidsexist = count($available) > count($uqidamounts);// Если доступные вопроосы еще есть
+            $nomoreavailableqids = count($available) <= count($uqidamounts); // Если были использованы все доступные вопросы
+            $isqidlessused = $uqidamounts[$questionid] != $minamount;        // Если данный вопрос использовался не минимальное количество раз
 
-                // Или были использованы все доступные вопросы,
-                // а данный вопрос использовался не минимальное количество раз (иначе его можно выбрать)
-                (count($available) <= count($uqidamounts) && $uqidamounts[$questionid] != $minamount)) {
+            if ($isqidexcluded || ($areavailableqidsexist && $isqidused) || ($nomoreavailableqids && $isqidlessused)) {
                 continue;   // Пропускаем данный вопрос
             }
 
