@@ -160,7 +160,7 @@ function quiz_create_attempt(quiz $quizobj, $attemptnumber, $lastattempt, $timen
  */
 function quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $timenow,
                                 $questionids = array(), $forcedvariantsbyslot = array()) {
-    global $USER;
+    global $DB, $USER;
 
     // Fully load all the questions in this quiz.
     $quizobj->preload_questions();
@@ -182,6 +182,13 @@ function quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $time
             } else {
                 $forcequestionid = $questionids[$quba->next_slot_number()];
             }
+
+            $prevattemptsuids = $DB->get_records_menu('quiz_attempts', array(
+                'quiz'      => $quizobj->get_quizid(),
+                'userid'    => $USER->id,
+                'preview'   => 0,
+                'state'     => 'finished'),
+                null, 'uniqueid');
 
             $question = question_bank::get_qtype('random')->choose_other_question(
                 $questiondata, $questionsinuse, $quizobj->get_quiz()->shuffleanswers, $forcequestionid, $quizobj->get_quizid());
