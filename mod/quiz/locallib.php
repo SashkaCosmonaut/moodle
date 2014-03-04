@@ -183,6 +183,7 @@ function quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $time
                 $forcequestionid = $questionids[$quba->next_slot_number()];
             }
 
+            // Get the array with unique ids of attempts of current quiz and current user
             $prevattemptsuids = $DB->get_records_menu('quiz_attempts', array(
                 'quiz'      => $quizobj->get_quizid(),
                 'userid'    => $USER->id,
@@ -232,22 +233,6 @@ function quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $time
     }
     $attempt->layout = implode(',', $newlayout);
     return $attempt;
-}
-
-/**
- * Отладочная печать указанной переменной с указанным сообщением
- * @param $smth Какая-то переменная, содержимое которой надо вывести
- * @param string $msg Поясняющее сообшение для вывода данных переменной
- */
-function pre_print($smth, $msg="") {
-
-    if ($msg != "") { echo "===== ".$msg.": =====<br/><br/>"; }
-
-    ?>
-        <pre>
-            <?print_r($smth);?>
-        </pre>
-    <?
 }
 
 /**

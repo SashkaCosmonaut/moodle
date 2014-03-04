@@ -222,6 +222,7 @@ class qtype_random extends question_type {
      * @param array        $excludedquestions of question ids. We will no pick any question whose id is in this list.
      * @param bool         $allowshuffle      if false, then any shuffle option on the selected quetsion is disabled.
      * @param null|integer $forcequestionid   if not null then force the picking of question with id $forcequestionid.
+     * @param null|array   $prevattemptsuids  if not null then previous attempts will be considered in the question selection.
      * @throws coding_exception
      * @return question_definition|null the definition of the question that was
      *      selected, or null if no suitable question could be found.
@@ -245,16 +246,13 @@ class qtype_random extends question_type {
             }
         }
 
-        $usedqidsamonuts = array();   // Массив использованных вопросов
+        $usedqidsamonuts = array();   // Array with identifiers of used questions.
 
-        // Если передали массив идентификаторов существующих попыток, т.е. нужно учитывать использованные вопросы
         if ($prevattemptsuids) {
-
-            // Создадим массивы параметров SQL для вставки в запрос с ключевым словом IN
+            // Create arrays of SQL query parameters to use with 'IN' statement.
             list($sqlquids, $paramquids) = $DB->get_in_or_equal($prevattemptsuids, SQL_PARAMS_NAMED);
 
-            // Запрос в БД для получения вопросов указанной категории, которые
-            // были уже использованы в данном тесте данным пользователем
+            // SQL query for obtaining the used questions ids and amounts of their uses.
             $query = "
                     SELECT
                         qa.questionid,
@@ -267,33 +265,29 @@ class qtype_random extends question_type {
                         qa.questionusageid $sqlquids
                     GROUP BY qa.questionid";
 
-            // Получаем вопросы из БД при помощи сформаированного запроса
             $usedqidsamonuts = $DB->get_records_sql_menu($query,
                 array_merge(array('categoryid' => $categoryid), $paramquids));
         }
 
-        // Получаем все имеющиеся вопросы данной категории
-        $questionsandcategories = $DB->get_records_menu('question', array(
+        $questionsandcategories = $DB->get_records_menu('question', array( // Get all questions ids of the current category.
             'category'  => $categoryid,
             'parent'    => 0));
 
-        // Добавляем в массив количесв уже исключенные из выборки вопросы текущей категории с максимальным
-        // количеством использований, чтобы они не рассматривались при выборке использованных вопросов
         foreach ($excludedquestions as $eq) {
-            if (array_key_exists($eq, $questionsandcategories)) {   // Если данный исключенный вопрос текущей категории
-                $usedqidsamonuts[$eq] = PHP_INT_MAX;
+            if (array_key_exists($eq, $questionsandcategories)) { // If there is a question of the current category...
+                $usedqidsamonuts[$eq] = PHP_INT_MAX;              // ... set its amount of uses to maximum so it won't be chosen.
             }
         }
 
-        $minamount = min(array_values($usedqidsamonuts));   // Определяем минимальное количество использований вопросов
+        $minamount = min(array_values($usedqidsamonuts));   // Get the minimum amount of uses.
 
         foreach ($available as $questionid) {
-            $isqidused              = array_key_exists($questionid, $usedqidsamonuts); // Или если данный вопрос уже использовался
-            $areavailableqidsexist  = count($available) > count($usedqidsamonuts);     // Если доступные вопроосы еще есть
-            $isqidlessused          = $usedqidsamonuts[$questionid] != $minamount;     // Если данный вопрос использовался не минимальное количество раз
+            $isqidused = array_key_exists($questionid, $usedqidsamonuts);   // Is the ID of this question used?
+            $areavailableqidsexist = count($available) > count($usedqidsamonuts);   // Are there the never used questions?
+            $isqidlessused = $usedqidsamonuts[$questionid] != $minamount;   // Is this question used the minimum amount of times?
 
             if ($usedqidsamonuts && $isqidused && ($areavailableqidsexist || $isqidlessused)) {
-                continue;   // Пропускаем данный вопрос
+                continue;
             }
 
             $question = question_bank::load_question($questionid, $allowshuffle);
