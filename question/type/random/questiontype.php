@@ -228,7 +228,7 @@ class qtype_random extends question_type {
      */
     public function choose_other_question($questiondata, $excludedquestions, $allowshuffle = true,
                                           $forcequestionid = null, $prevattemptsuids = null) {
-        global $DB, $USER;
+        global $DB;
 
         $categoryid = $questiondata->category;
 
@@ -247,9 +247,10 @@ class qtype_random extends question_type {
 
         $usedqidsamonuts = array();   // Массив использованных вопросов
 
-        // Если передали идентификатор теста, т.е. нужно учитывать прежние вопросы
+        // Если передали массив идентификаторов существующих попыток, т.е. нужно учитывать использованные вопросы
         if ($prevattemptsuids) {
 
+            // Создадим массивы параметров SQL для вставки в запрос с ключевым словом IN
             list($sqlquids, $paramquids) = $DB->get_in_or_equal($prevattemptsuids, SQL_PARAMS_NAMED);
 
             // Запрос в БД для получения вопросов указанной категории, которые
@@ -266,21 +267,15 @@ class qtype_random extends question_type {
                         qa.questionusageid $sqlquids
                     GROUP BY qa.questionid";
 
-            pre_print($query, 'query');
-
             // Получаем вопросы из БД при помощи сформаированного запроса
             $usedqidsamonuts = $DB->get_records_sql_menu($query,
                 array_merge(array('categoryid' => $categoryid), $paramquids));
-
-            pre_print($usedqidsamonuts, "usedqidsamonuts");
         }
 
         // Получаем все имеющиеся вопросы данной категории
         $questionsandcategories = $DB->get_records_menu('question', array(
             'category'  => $categoryid,
             'parent'    => 0));
-
-        pre_print($questionsandcategories, "questionsandcategories");
 
         // Добавляем в массив количесв уже исключенные из выборки вопросы текущей категории с максимальным
         // количеством использований, чтобы они не рассматривались при выборке использованных вопросов
@@ -292,36 +287,19 @@ class qtype_random extends question_type {
 
         $minamount = min(array_values($usedqidsamonuts));   // Определяем минимальное количество использований вопросов
 
-        pre_print($usedqidsamonuts, "usedqidsamonuts");
-        pre_print($excludedquestions, "excludedquestions");
-        pre_print($minamount, "minamount");
-
         foreach ($available as $questionid) {
             $isqidused              = array_key_exists($questionid, $usedqidsamonuts); // Или если данный вопрос уже использовался
             $areavailableqidsexist  = count($available) > count($usedqidsamonuts);     // Если доступные вопроосы еще есть
             $isqidlessused          = $usedqidsamonuts[$questionid] != $minamount;     // Если данный вопрос использовался не минимальное количество раз
 
-            pre_print(array_key_exists($questionid, $usedqidsamonuts), "array_key_exists($questionid, usedqidsamonuts)");
-
-            pre_print(count($available) > count($usedqidsamonuts),
-                "count(available)(".count($available).") > count(usedqidsamonuts)(".count($usedqidsamonuts).")");
-
-            pre_print($usedqidsamonuts[$questionid] != $minamount,
-                "usedqidsamonuts[$questionid]($usedqidsamonuts[$questionid]) != $minamount");
-
             if ($usedqidsamonuts && $isqidused && ($areavailableqidsexist || $isqidlessused)) {
-                pre_print($questionid, "CANCELED");
                 continue;   // Пропускаем данный вопрос
             }
-
-            pre_print($questionid, "CONFIRMED");
 
             $question = question_bank::load_question($questionid, $allowshuffle);
             $this->set_selected_question_name($question, $questiondata->name);
             return $question;
         }
-
-        pre_print("BAD EXIT");
 
         return null;
     }
