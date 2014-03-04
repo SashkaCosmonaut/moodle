@@ -191,7 +191,8 @@ function quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $time
                 null, 'uniqueid');
 
             $question = question_bank::get_qtype('random')->choose_other_question(
-                $questiondata, $questionsinuse, $quizobj->get_quiz()->shuffleanswers, $forcequestionid, $quizobj->get_quizid());
+                $questiondata, $questionsinuse, $quizobj->get_quiz()->shuffleanswers, $forcequestionid,
+                array_keys($prevattemptsuids));
             if (is_null($question)) {
                 throw new moodle_exception('notenoughrandomquestions', 'quiz',
                                            $quizobj->view_url(), $questiondata);

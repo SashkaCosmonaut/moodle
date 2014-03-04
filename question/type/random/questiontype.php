@@ -227,7 +227,7 @@ class qtype_random extends question_type {
      *      selected, or null if no suitable question could be found.
      */
     public function choose_other_question($questiondata, $excludedquestions, $allowshuffle = true,
-                                          $forcequestionid = null, $quizid = null) {
+                                          $forcequestionid = null, $prevattemptsuids = null) {
         global $DB, $USER;
 
         $categoryid = $questiondata->category;
@@ -245,11 +245,13 @@ class qtype_random extends question_type {
             }
         }
 
-        $minamount = 0;             // Минимальное количество использований вопросов
         $usedqidsamonuts = array();   // Массив использованных вопросов
 
         // Если передали идентификатор теста, т.е. нужно учитывать прежние вопросы
-        if ($quizid) {
+        if ($prevattemptsuids) {
+
+            list($sqlquids, $paramquids) = $DB->get_in_or_equal($prevattemptsuids, SQL_PARAMS_NAMED);
+
             // Запрос в БД для получения вопросов указанной категории, которые
             // были уже использованы в данном тесте данным пользователем
             $query = "
@@ -259,45 +261,40 @@ class qtype_random extends question_type {
 
                     FROM {question_attempts} qa
                     JOIN {question} qn ON qn.id = qa.questionid
-                    JOIN {quiz_attempts} quiza ON quiza.uniqueid = qa.questionusageid
 
                     WHERE qn.category = :categoryid AND
-                        quiza.userid = :userid AND
-                        quiza.quiz = :quizid
+                        qa.questionusageid $sqlquids
                     GROUP BY qa.questionid";
 
+            pre_print($query, 'query');
+
             // Получаем вопросы из БД при помощи сформаированного запроса
-            $usedqidsamonuts = $DB->get_records_sql_menu($query, array(
-                'categoryid' => $categoryid,
-                'userid'     => $USER->id,
-                'quizid'     => $quizid ));
+            $usedqidsamonuts = $DB->get_records_sql_menu($query,
+                array_merge(array('categoryid' => $categoryid), $paramquids));
 
             pre_print($usedqidsamonuts, "usedqidsamonuts");
+        }
 
-            if ($usedqidsamonuts) {                   // Если есть ранее использовавшиеся вопросы
-                // Получаем все имеющиеся вопросы данной категории
-                $questionsandcategories = $DB->get_records_menu('question', array(
-                    'category'  => $categoryid,
-                    'parent'    => 0));
+        // Получаем все имеющиеся вопросы данной категории
+        $questionsandcategories = $DB->get_records_menu('question', array(
+            'category'  => $categoryid,
+            'parent'    => 0));
 
-                pre_print($questionsandcategories, "questionsandcategories");
+        pre_print($questionsandcategories, "questionsandcategories");
 
-                // Добавляем в массив количесв уже исключенные из выборки вопросы текущей категории с максимальным
-                // количеством использований, чтобы они не рассматривались при выборке использованных вопросов
-                foreach ($excludedquestions as $eq) {
-                    if (array_key_exists($eq, $questionsandcategories)) {   // Если данный исключенный вопрос текущей категории
-                        $usedqidsamonuts[$eq] = PHP_INT_MAX;
-                    }
-                }
-
-                pre_print($usedqidsamonuts, "usedqidsamonuts");
-                pre_print($excludedquestions, "excludedquestions");
-
-                $minamount = min(array_values($usedqidsamonuts));   // Определяем минимальное количество использований вопросов
-
-                pre_print($minamount, "minamount");
+        // Добавляем в массив количесв уже исключенные из выборки вопросы текущей категории с максимальным
+        // количеством использований, чтобы они не рассматривались при выборке использованных вопросов
+        foreach ($excludedquestions as $eq) {
+            if (array_key_exists($eq, $questionsandcategories)) {   // Если данный исключенный вопрос текущей категории
+                $usedqidsamonuts[$eq] = PHP_INT_MAX;
             }
         }
+
+        $minamount = min(array_values($usedqidsamonuts));   // Определяем минимальное количество использований вопросов
+
+        pre_print($usedqidsamonuts, "usedqidsamonuts");
+        pre_print($excludedquestions, "excludedquestions");
+        pre_print($minamount, "minamount");
 
         foreach ($available as $questionid) {
             $isqidused              = array_key_exists($questionid, $usedqidsamonuts); // Или если данный вопрос уже использовался
@@ -312,7 +309,7 @@ class qtype_random extends question_type {
             pre_print($usedqidsamonuts[$questionid] != $minamount,
                 "usedqidsamonuts[$questionid]($usedqidsamonuts[$questionid]) != $minamount");
 
-            if ($isqidused && ($areavailableqidsexist || $isqidlessused)) {
+            if ($usedqidsamonuts && $isqidused && ($areavailableqidsexist || $isqidlessused)) {
                 pre_print($questionid, "CANCELED");
                 continue;   // Пропускаем данный вопрос
             }
