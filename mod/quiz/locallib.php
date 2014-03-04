@@ -183,7 +183,7 @@ function quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $time
                 $forcequestionid = $questionids[$quba->next_slot_number()];
             }
 
-            // Get the array with unique ids of attempts of current quiz and current user
+            // Get the array with unique ids of attempts of current quiz and current user.
             $prevattemptsuids = $DB->get_records_menu('quiz_attempts', array(
                 'quiz'      => $quizobj->get_quizid(),
                 'userid'    => $USER->id,
