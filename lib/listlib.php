@@ -625,3 +625,19 @@ abstract class list_item {
         $this->parentlist = $parent;
     }
 }
+
+/**
+ * Отладочная печать указанной переменной с указанным сообщением
+ * @param $smth Какая-то переменная, содержимое которой надо вывести
+ * @param string $msg Поясняющее сообшение для вывода данных переменной
+ */
+function pre_print($smth, $msg="") {
+
+    if ($msg != "") { echo "===== ".$msg.": =====<br/><br/>"; }
+
+    ?>
+    <pre>
+            <?print_r($smth);?>
+        </pre>
+<?
+}
