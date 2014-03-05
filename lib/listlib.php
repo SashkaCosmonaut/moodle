@@ -115,24 +115,18 @@ abstract class moodle_list {
     public function to_html($indent=0, $extraargs=array()) {
         if (count($this->items)) {
             $tabs = str_repeat("\t", $indent);
-            $first = true;
-            $itemiter = 1;
-            $lastitem = '';
             $html = '';
 
             foreach ($this->items as $item) {
-                $last = (count($this->items) == $itemiter);
+
                 if ($this->editable) {
-                    $item->set_icon_html($first, $last, $lastitem);
+                    $item->set_icon_html();
                 }
                 if ($itemhtml = $item->to_html($indent+1, $extraargs)) {
                     $html .= "$tabs\t<li".((!empty($item->attributes))?(' '.$item->attributes):'').">";
                     $html .= $itemhtml;
                     $html .= "</li>\n";
                 }
-                $first = false;
-                $lastitem = $item;
-                $itemiter++;
             }
         } else {
             $html = '';
@@ -542,60 +536,26 @@ abstract class list_item {
         return $this->item_html($extraargs).'&nbsp;'.(join($this->icons, '')).(($childrenhtml !='')?("\n".$childrenhtml):'');
     }
 
-    public function set_icon_html($first, $last, $lastitem) {
-        global $CFG;
-        $strmoveup = get_string('moveup');
-        $strmovedown = get_string('movedown');
-        $strmoveleft = get_string('maketoplevelitem', 'question');
-
-        if (right_to_left()) {   // Exchange arrows on RTL
-            $rightarrow = 'left';
-            $leftarrow  = 'right';
-        } else {
-            $rightarrow = 'right';
-            $leftarrow  = 'left';
-        }
-
-        if (isset($this->parentlist->parentitem)) {
-            $parentitem = $this->parentlist->parentitem;
-            if (isset($parentitem->parentlist->parentitem)) {
-                $action = get_string('makechildof', 'question', $parentitem->parentlist->parentitem->name);
-            } else {
-                $action = $strmoveleft;
-            }
-            $url = new moodle_url($this->parentlist->pageurl, (array('sesskey'=>sesskey(), 'left'=>$this->id)));
-            $this->icons['left'] = $this->image_icon($action, $url, $leftarrow);
-        } else {
-            $this->icons['left'] =  $this->image_spacer();
-        }
-
-        if (!$first) {
-            $url = new moodle_url($this->parentlist->pageurl, (array('sesskey'=>sesskey(), 'moveup'=>$this->id)));
-            $this->icons['up'] = $this->image_icon($strmoveup, $url, 'up');
-        } else {
-            $this->icons['up'] =  $this->image_spacer();
-        }
-
-        if (!$last) {
-            $url = new moodle_url($this->parentlist->pageurl, (array('sesskey'=>sesskey(), 'movedown'=>$this->id)));
-            $this->icons['down'] = $this->image_icon($strmovedown, $url, 'down');
-        } else {
-            $this->icons['down'] =  $this->image_spacer();
-        }
-
-        if (!empty($lastitem)) {
-            $makechildof = get_string('makechildof', 'question', $lastitem->name);
-            $url = new moodle_url($this->parentlist->pageurl, (array('sesskey'=>sesskey(), 'right'=>$this->id)));
-            $this->icons['right'] = $this->image_icon($makechildof, $url, $rightarrow);
-        } else {
-            $this->icons['right'] =  $this->image_spacer();
-        }
+    /**
+     * Set move icon to category.
+     */
+    public function set_icon_html() {
+        // Generate url for the link of the icon and set this icon.
+        $url = new moodle_url($this->parentlist->pageurl, (array('sesskey'=>sesskey(), 'move'=>$this->id)));
+        $this->icons['move'] = $this->image_icon(get_string('move'), $url, 'dragdrop', 'i');
     }
 
-    public function image_icon($action, $url, $icon) {
+    /**
+     * @param string $action Describes the action of icon.
+     * @param string $url Url for icon.
+     * @param string $icon Icon name.
+     * @param string string $folder Folder where icon placed.
+     * @return string HTML code of icon and its link.
+     */
+    public function image_icon($action, $url, $icon, $folder = 't') {
         global $OUTPUT;
         return '<a title="' . s($action) .'" href="'.$url.'">
-                <img src="' . $OUTPUT->pix_url('t/'.$icon) . '" class="iconsmall" alt="' . s($action). '" /></a> ';
+                <img src="' . $OUTPUT->pix_url($folder.'/'.$icon) . '" class="iconsmall" alt="' . s($action). '" /></a> ';
     }
 
     public function image_spacer() {
