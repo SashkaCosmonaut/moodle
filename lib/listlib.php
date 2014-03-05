@@ -546,8 +546,10 @@ abstract class list_item {
     }
 
     /**
+     * Get image icon with a link for category.
+     *
      * @param string $action Describes the action of icon.
-     * @param string $url Url for icon.
+     * @param string $url Url for the link of icon.
      * @param string $icon Icon name.
      * @param string string $folder Folder where icon placed.
      * @return string HTML code of icon and its link.
