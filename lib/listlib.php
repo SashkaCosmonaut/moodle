@@ -115,18 +115,24 @@ abstract class moodle_list {
     public function to_html($indent=0, $extraargs=array()) {
         if (count($this->items)) {
             $tabs = str_repeat("\t", $indent);
+            $first = true;
+            $itemiter = 1;
+            $lastitem = '';
             $html = '';
 
             foreach ($this->items as $item) {
-
+                $last = (count($this->items) == $itemiter);
                 if ($this->editable) {
-                    $item->set_icon_html();
+                    $item->set_icon_html($first, $last, $lastitem);
                 }
                 if ($itemhtml = $item->to_html($indent+1, $extraargs)) {
                     $html .= "$tabs\t<li".((!empty($item->attributes))?(' '.$item->attributes):'').">";
                     $html .= $itemhtml;
                     $html .= "</li>\n";
                 }
+                $first = false;
+                $lastitem = $item;
+                $itemiter++;
             }
         } else {
             $html = '';
@@ -449,38 +455,6 @@ abstract class moodle_list {
         return $this->page && isset($this->items[$this->lastitem]) &&
                 $itemid == $this->items[$this->lastitem]->id;
     }
-
-    /**
-     * Перевести список в режим перемещения указанной категории.
-     */
-    public function set_movement_mode() {
-
-    }
-
-    /**
-     * Отменить режим перемещения списка и перевести его в обычный режим.
-     */
-    public function cancel_movement_mode() {
-
-    }
-
-    /**
-     * Переместить запись в списке после другой записи в данном списке.
-     * @param integer $movedrecord Идентификатор перемещаемой записи списка.
-     * @param integer $upperrecord Идентификатор записи, после которой вставляется перемещаемая запись.
-     */
-    public function move_item_after($movedrecord, $upperrecord) {
-
-    }
-
-    /**
-     * Переместить запись в качестве дочверней другой записи.
-     * @param integer $movedrecord Идентификатор перемещаемой записи списка.
-     * @param integer $parentrecord Идентификатор родительской записи.
-     */
-    public function move_item_in($movedrecord, $parentrecord) {
-
-    }
 }
 
 /**
@@ -568,28 +542,60 @@ abstract class list_item {
         return $this->item_html($extraargs).'&nbsp;'.(join($this->icons, '')).(($childrenhtml !='')?("\n".$childrenhtml):'');
     }
 
-    /**
-     * Set move icon to category.
-     */
-    public function set_icon_html() {
-        // Generate url for the link of the icon and set this icon.
-        $url = new moodle_url($this->parentlist->pageurl, (array('sesskey'=>sesskey(), 'move'=>$this->id)));
-        $this->icons['move'] = $this->image_icon(get_string('move'), $url, 'dragdrop', 'i');
+    public function set_icon_html($first, $last, $lastitem) {
+        global $CFG;
+        $strmoveup = get_string('moveup');
+        $strmovedown = get_string('movedown');
+        $strmoveleft = get_string('maketoplevelitem', 'question');
+
+        if (right_to_left()) {   // Exchange arrows on RTL
+            $rightarrow = 'left';
+            $leftarrow  = 'right';
+        } else {
+            $rightarrow = 'right';
+            $leftarrow  = 'left';
+        }
+
+        if (isset($this->parentlist->parentitem)) {
+            $parentitem = $this->parentlist->parentitem;
+            if (isset($parentitem->parentlist->parentitem)) {
+                $action = get_string('makechildof', 'question', $parentitem->parentlist->parentitem->name);
+            } else {
+                $action = $strmoveleft;
+            }
+            $url = new moodle_url($this->parentlist->pageurl, (array('sesskey'=>sesskey(), 'left'=>$this->id)));
+            $this->icons['left'] = $this->image_icon($action, $url, $leftarrow);
+        } else {
+            $this->icons['left'] =  $this->image_spacer();
+        }
+
+        if (!$first) {
+            $url = new moodle_url($this->parentlist->pageurl, (array('sesskey'=>sesskey(), 'moveup'=>$this->id)));
+            $this->icons['up'] = $this->image_icon($strmoveup, $url, 'up');
+        } else {
+            $this->icons['up'] =  $this->image_spacer();
+        }
+
+        if (!$last) {
+            $url = new moodle_url($this->parentlist->pageurl, (array('sesskey'=>sesskey(), 'movedown'=>$this->id)));
+            $this->icons['down'] = $this->image_icon($strmovedown, $url, 'down');
+        } else {
+            $this->icons['down'] =  $this->image_spacer();
+        }
+
+        if (!empty($lastitem)) {
+            $makechildof = get_string('makechildof', 'question', $lastitem->name);
+            $url = new moodle_url($this->parentlist->pageurl, (array('sesskey'=>sesskey(), 'right'=>$this->id)));
+            $this->icons['right'] = $this->image_icon($makechildof, $url, $rightarrow);
+        } else {
+            $this->icons['right'] =  $this->image_spacer();
+        }
     }
 
-    /**
-     * Get image icon with a link for category.
-     *
-     * @param string $action Describes the action of icon.
-     * @param string $url Url for the link of icon.
-     * @param string $icon Icon name.
-     * @param string string $folder Folder where icon placed.
-     * @return string HTML code of icon and its link.
-     */
-    public function image_icon($action, $url, $icon, $folder = 't') {
+    public function image_icon($action, $url, $icon) {
         global $OUTPUT;
         return '<a title="' . s($action) .'" href="'.$url.'">
-                <img src="' . $OUTPUT->pix_url($folder.'/'.$icon) . '" class="iconsmall" alt="' . s($action). '" /></a> ';
+                <img src="' . $OUTPUT->pix_url('t/'.$icon) . '" class="iconsmall" alt="' . s($action). '" /></a> ';
     }
 
     public function image_spacer() {
@@ -618,20 +624,4 @@ abstract class list_item {
     public function set_parent($parent) {
         $this->parentlist = $parent;
     }
-}
-
-/**
- * Отладочная печать указанной переменной с указанным сообщением
- * @param $smth Какая-то переменная, содержимое которой надо вывести
- * @param string $msg Поясняющее сообшение для вывода данных переменной
- */
-function pre_print($smth, $msg="") {
-
-    if ($msg != "") { echo "===== ".$msg.": =====<br/><br/>"; }
-
-    ?>
-    <pre>
-            <?print_r($smth);?>
-        </pre>
-<?
 }
