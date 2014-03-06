@@ -419,7 +419,7 @@ class question_category_object {
     /**
      * Updates an existing category with given params
      */
-    public function update_category($updateid, $newparent, $newname, $newinfo, $newinfoformat = FORMAT_HTML) {
+    public function update_category($updateid, $newparent, $newname, $newinfo, $newinfoformat = FORMAT_HTML, $redirect = true) {
         global $CFG, $DB;
         if (empty($newname)) {
             print_error('categorynamecantbeblank', 'question');
@@ -473,8 +473,10 @@ class question_category_object {
             question_move_category_to_context($cat->id, $oldcat->contextid, $tocontextid);
         }
 
-        // Cat param depends on the context id, so update it.
-        $this->pageurl->param('cat', $updateid . ',' . $tocontextid);
-        redirect($this->pageurl);
+        if ($redirect) {    // Если требуется обновить страницу.
+            // Cat param depends on the context id, so update it.
+            $this->pageurl->param('cat', $updateid . ',' . $tocontextid);
+            redirect($this->pageurl);
+        }
     }
 }
