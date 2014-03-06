@@ -55,6 +55,11 @@ class question_category_list extends moodle_list {
     public $context = null;
     public $sortby = 'parent, sortorder, name';
 
+    /**
+     * @var bool Флаг, отображающий, активирован ли режим перемещения категории.
+     */
+    public $movementmode = false;
+
     public function __construct($type='ul', $attributes='', $editable = false, $pageurl=null, $page = 0, $pageparamname = 'page', $itemsperpage = 20, $context = null){
         parent::__construct('ul', '', $editable, $pageurl, $page, 'cpage', $itemsperpage);
         $this->context = $context;
@@ -68,14 +73,14 @@ class question_category_list extends moodle_list {
      * Перевести список в режим перемещения указанной категории.
      */
     public function set_movement_mode() {
-
+        $movementmode = true;
     }
 
     /**
      * Отменить режим перемещения списка и перевести его в обычный режим.
      */
     public function cancel_movement_mode() {
-
+        $movementmode = false;
     }
 
     /**
@@ -84,7 +89,7 @@ class question_category_list extends moodle_list {
      * @param integer $upperrecord Идентификатор записи, после которой вставляется перемещаемая запись.
      */
     public function move_item_after($movedrecord, $upperrecord) {
-
+        $movementmode = false;
     }
 
     /**
@@ -93,7 +98,7 @@ class question_category_list extends moodle_list {
      * @param integer $parentrecord Идентификатор родительской записи.
      */
     public function move_item_in($movedrecord, $parentrecord) {
-
+        $movementmode = false;
     }
 }
 
