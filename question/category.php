@@ -33,9 +33,6 @@ list($thispageurl, $contexts, $cmid, $cm, $module, $pagevars) =
 
 // Get values from form for actions on this page.
 $param = new stdClass();
-$param->moveupcontext = optional_param('moveupcontext', 0, PARAM_INT);
-$param->movedowncontext = optional_param('movedowncontext', 0, PARAM_INT);
-$param->tocontext = optional_param('tocontext', 0, PARAM_INT);
 $param->delete = optional_param('delete', 0, PARAM_INT);
 $param->confirm = optional_param('confirm', 0, PARAM_INT);
 $param->edit = optional_param('edit', 0, PARAM_INT);
@@ -45,7 +42,6 @@ $param->moveto = optional_param('moveto', 0, PARAM_INT);        // Помест�
 $param->movetocontext = optional_param('movetocontext', 0, PARAM_INT);  // Поместить в конец списка категорий в контексте или в пустой контекст с указанным id
 $param->movein = optional_param('movein', 0, PARAM_INT);        // Поместить в подкатегорию категории с указанным id (под категорией)
 $param->cancel = optional_param('cancel', '', PARAM_INT);       // Отмена перемещения
-
 
 $url = new moodle_url($thispageurl);
 foreach ((array)$param as $key=>$value) {
@@ -59,34 +55,11 @@ $qcobject = new question_category_object($pagevars['cpage'], $thispageurl,
         $contexts->having_one_edit_tab_cap('categories'), $param->edit,
         $pagevars['cat'], $param->delete, $contexts->having_cap('moodle/question:add'));
 
-
-
-// Если была команда на перемещение
-if ($param->left || $param->right || $param->moveup || $param->movedown) {
-    require_sesskey();
-
-    foreach ($qcobject->editlists as $list) {
-        // Processing of these actions is handled in the method where appropriate and page redirects.
-        $list->process_actions($param->left, $param->right, $param->moveup, $param->movedown);
-    }
-}
-
-
-// Обновили контекст категории
-if ($param->moveupcontext || $param->movedowncontext) {
-    require_sesskey();
-
-    if ($param->moveupcontext) {
-        $catid = $param->moveupcontext;
-    } else {
-        $catid = $param->movedowncontext;
-    }
-    $oldcat = $DB->get_record('question_categories', array('id' => $catid), '*', MUST_EXIST);
-    $qcobject->update_category($catid, '0,'.$param->tocontext, $oldcat->name, $oldcat->info);
-    // The previous line does a redirect().
-}
-
-
+$qcobject->on_move($param->move);               // Если начали перемещать категорию.
+$qcobject->on_cancel_moove($param->cancel);     // Если отменили перемещение категории.
+$qcobject->on_move_to($param->moveto);          // Если категорию переместили под другой категорией в этом же контексте.
+$qcobject->on_move_in($param->movein);          // Если категорию сделали дочерней другой категории в этом же контексте.
+$qcobject->on_move_to_context($param->movetocontext, $param->moveto, $param->movein);   // Если переместили в другой контекст.
 
 if ($param->delete && ($questionstomove = $DB->count_records("question", array("category" => $param->delete)))) {
     if (!$category = $DB->get_record("question_categories", array("id" => $param->delete))) {  // security

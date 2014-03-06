@@ -479,4 +479,93 @@ class question_category_object {
             redirect($this->pageurl);
         }
     }
+
+    /**
+     * Обработка запроса на начало процесса перемещения категории.
+     * @param integer $movedcatid Идентификатор перемещаемой категории.
+     */
+    public function on_move($movedcatid) {
+        if ($movedcatid) {
+            require_sesskey();
+
+            $this->movedcatid = $movedcatid;   // Сохраним идентификатор перемещаемой категории.
+
+            // Переводим все имеющиеся списки в режим перемещения.
+            foreach ($this->editlists as $list) {
+                $list->set_movement_mode();
+            }
+        }
+    }
+
+    /**
+     * Обработка запроса на отмену перемещения категории.
+     * @param bool $iscanceled Надо ли отменить перемещение.
+     */
+    public function on_cancel_moove($iscanceled) {
+        if ($iscanceled) {
+            require_sesskey();
+
+            $this->movedcatid = 0;  // Больше никакая категория не перемещается.
+
+            // Отменяем во всех списках режим перемещения.
+            foreach ($this->editlists as $list) {
+                $list->cancal_movement_mode();
+            }
+        }
+    }
+
+    /**
+     * Обработка запроса на вставку категории после указанной категории.
+     * @param integer $uppercatid Идентификатор категории, после окторой нужно вставить перемещаемую категорию.
+     */
+    public function on_move_to($uppercatid) {
+        if ($uppercatid) {
+            require_sesskey();
+
+            foreach ($this->editlists as $list) {
+                // Пробуем переместить перемещаемую категорию под указанной категорией, если она содержится в данном списке.
+                $list->move_item_after($this->movedcatid, $uppercatid); // В $param->moveto хранится id категории, после которой будет расположена перемещаемая категория.
+            }
+        }
+    }
+
+    /**
+     * Обработка запроса на перемещение категории в качестве подкатегории другой категории.
+     * @param integer $parentcatid Идентификатор родительской категории, для которой перемещаемая категнория станет дочерней..
+     */
+    public function on_move_in($parentcatid) {
+        if ($parentcatid) {
+            require_sesskey();
+
+            foreach ($this->editlists as $list) {
+                // Пробуем переместить перемещаемую категорию внутрь указанной категории, если она содержится в данном списке.
+                $list->move_item_in($this->movedcatid, $parentcatid);  // В $param->movein хранится id категории, потомком которой хотим сделать перемещаемую категорию.
+            }
+        }
+    }
+
+    /**
+     * Обработка запроса на перемещение категории в другой контекст.
+     * @param int $newcontextid Идентификатор нового контекста.
+     * @param int $uppercatid Идентификатор категории, за окторой вставили перемещаемую категорию.
+     * @param int $parentcatid Идентификатор родительской категории, для которой перемещаемая категория стала дочерней.
+     */
+    public function on_move_to_context($newcontextid, $uppercatid = 0, $parentcatid = 0) {
+        global $DB;
+
+        if ($newcontextid) {
+            require_sesskey();
+
+            // Изменяем контекст у перемещаемой категории.
+            $oldcat = $DB->get_record('question_categories', array('id' => $this->movedcatid), '*', MUST_EXIST);
+
+            // Обновляем категорию, но без обновления страницы
+            $this->update_category($this->movedcatid, '0,'.$newcontextid, $oldcat->name, $oldcat->info,FORMAT_HTML, false);
+
+            $this->on_move_to($uppercatid);     // Проверить, если перемещаемую категорию еще и вставили за категорией.
+            $this->on_move_in($parentcatid);    // Проверить, если перемещаемую категорию еще и сделали потомком категории.
+        }
+
+    }
+
 }
