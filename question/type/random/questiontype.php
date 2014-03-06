@@ -222,13 +222,13 @@ class qtype_random extends question_type {
      * @param array        $excludedquestions of question ids. We will no pick any question whose id is in this list.
      * @param bool         $allowshuffle      if false, then any shuffle option on the selected quetsion is disabled.
      * @param null|integer $forcequestionid   if not null then force the picking of question with id $forcequestionid.
-     * @param null|array   $prevattemptsuids  if not null then previous attempts will be considered in the question selection.
+     * @param null|array   $prevattemptsusageids  if not null then previous attempts will be considered in the question selection.
      * @throws coding_exception
      * @return question_definition|null the definition of the question that was
      *      selected, or null if no suitable question could be found.
      */
     public function choose_other_question($questiondata, $excludedquestions, $allowshuffle = true,
-                                          $forcequestionid = null, $prevattemptsuids = null) {
+                                          $forcequestionid = null, $prevattemptsusageids = null) {
         global $DB;
 
         $categoryid = $questiondata->category;
@@ -248,9 +248,9 @@ class qtype_random extends question_type {
 
         $usedqidsamonuts = array();   // Array with identifiers of used questions.
 
-        if ($prevattemptsuids) {
+        if ($prevattemptsusageids) {
             // Create arrays of SQL query parameters to use with 'IN' statement.
-            list($sqlquids, $paramquids) = $DB->get_in_or_equal($prevattemptsuids, SQL_PARAMS_NAMED);
+            list($sqlquids, $paramquids) = $DB->get_in_or_equal($prevattemptsusageids, SQL_PARAMS_NAMED);
 
             // SQL query for obtaining the used questions ids and amounts of their uses.
             $query = "
