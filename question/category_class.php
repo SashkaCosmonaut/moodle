@@ -158,6 +158,11 @@ class question_category_object {
     public $catform;
 
     /**
+     * @var integer Идентификатор перемещаемой категории.
+     */
+    public $movedcatid = 0;
+
+    /**
      * Constructor
      *
      * Gets necessary strings and sets relevant path information
