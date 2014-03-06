@@ -75,9 +75,18 @@ class question_category_list extends moodle_list {
      * @param integer $indent depth of indentation.
      */
     public function to_html($indent=0, $extraargs=array()) {
+        global $OUTPUT;
+
         if (count($this->items)) {
             $tabs = str_repeat("\t", $indent);
             $html = '';
+
+            if ($this->movementmode) {
+                $movingpix = new pix_icon('movehere', get_string('movehere'), 'moodle', array('class' => 'movetarget'));
+                $movingurl = new moodle_url($this->pageurl, array('moveto' => 0, 'sesskey' => sesskey()));
+                $html .= html_writer::tag('li', html_writer::link($movingurl, $OUTPUT->render($movingpix)),
+                    array('class' => 'movehere', 'title' => 'qwe'));
+            }
 
             foreach ($this->items as $item) {
                 if ($this->editable) {
@@ -106,14 +115,14 @@ class question_category_list extends moodle_list {
      * Перевести список в режим перемещения указанной категории.
      */
     public function set_movement_mode() {
-        $movementmode = true;
+        $this->movementmode = true;
     }
 
     /**
      * Отменить режим перемещения списка и перевести его в обычный режим.
      */
     public function cancel_movement_mode() {
-        $movementmode = false;
+        $this->movementmode = false;
     }
 
     /**
@@ -122,7 +131,7 @@ class question_category_list extends moodle_list {
      * @param integer $upperrecord Идентификатор записи, после которой вставляется перемещаемая запись.
      */
     public function move_item_after($movedrecord, $upperrecord) {
-        $movementmode = false;
+        $this->movementmode = false;
     }
 
     /**
@@ -131,7 +140,7 @@ class question_category_list extends moodle_list {
      * @param integer $parentrecord Идентификатор родительской записи.
      */
     public function move_item_in($movedrecord, $parentrecord) {
-        $movementmode = false;
+        $this->movementmode = false;
     }
 }
 
