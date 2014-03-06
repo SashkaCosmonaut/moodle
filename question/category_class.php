@@ -158,7 +158,7 @@ class question_category_object {
     public $catform;
 
     /**
-     * @var integer Идентификатор перемещаемой категории.
+     * @var int Идентификатор перемещаемой категории.
      */
     public $movedcatid = 0;
 
@@ -482,7 +482,7 @@ class question_category_object {
 
     /**
      * Обработка запроса на начало процесса перемещения категории.
-     * @param integer $movedcatid Идентификатор перемещаемой категории.
+     * @param int $movedcatid Идентификатор перемещаемой категории.
      */
     public function on_move($movedcatid) {
         if ($movedcatid) {
@@ -509,14 +509,14 @@ class question_category_object {
 
             // Отменяем во всех списках режим перемещения.
             foreach ($this->editlists as $list) {
-                $list->cancal_movement_mode();
+                $list->cancel_movement_mode();
             }
         }
     }
 
     /**
      * Обработка запроса на вставку категории после указанной категории.
-     * @param integer $uppercatid Идентификатор категории, после окторой нужно вставить перемещаемую категорию.
+     * @param int $uppercatid Идентификатор категории, после окторой нужно вставить перемещаемую категорию.
      */
     public function on_move_to($uppercatid) {
         if ($uppercatid) {
@@ -531,7 +531,7 @@ class question_category_object {
 
     /**
      * Обработка запроса на перемещение категории в качестве подкатегории другой категории.
-     * @param integer $parentcatid Идентификатор родительской категории, для которой перемещаемая категнория станет дочерней..
+     * @param int $parentcatid Идентификатор родительской категории, для которой перемещаемая категнория станет дочерней..
      */
     public function on_move_in($parentcatid) {
         if ($parentcatid) {
