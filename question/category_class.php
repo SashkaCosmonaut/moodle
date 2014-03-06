@@ -73,23 +73,18 @@ class question_category_list extends moodle_list {
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class question_category_list_item extends list_item {
-    public function set_icon_html($first, $last, $lastitem){
-        global $CFG;
+
+    /**
+     * Set icons to category in the list.
+     */
+    public function set_icon_html(){
         $category = $this->item;
         $url = new moodle_url('/question/category.php', ($this->parentlist->pageurl->params() + array('edit'=>$category->id)));
         $this->icons['edit']= $this->image_icon(get_string('editthiscategory', 'question'), $url, 'edit');
-        parent::set_icon_html($first, $last, $lastitem);
-        $toplevel = ($this->parentlist->parentitem === null);//this is a top level item
-        if (($this->parentlist->nextlist !== null) && $last && $toplevel && (count($this->parentlist->items)>1)){
-            $url = new moodle_url($this->parentlist->pageurl, array('movedowncontext'=>$this->id, 'tocontext'=>$this->parentlist->nextlist->context->id, 'sesskey'=>sesskey()));
-            $this->icons['down'] = $this->image_icon(
-                get_string('shareincontext', 'question', $this->parentlist->nextlist->context->get_context_name()), $url, 'down');
-        }
-        if (($this->parentlist->lastlist !== null) && $first && $toplevel && (count($this->parentlist->items)>1)){
-            $url = new moodle_url($this->parentlist->pageurl, array('moveupcontext'=>$this->id, 'tocontext'=>$this->parentlist->lastlist->context->id, 'sesskey'=>sesskey()));
-            $this->icons['up'] = $this->image_icon(
-                get_string('shareincontext', 'question', $this->parentlist->lastlist->context->get_context_name()), $url, 'up');
-        }
+
+        // Generate url for the link of the icon and set this icon.
+        $url = new moodle_url($this->parentlist->pageurl, (array('sesskey'=>sesskey(), 'move'=>$this->id)));
+        $this->icons['move'] = $this->image_icon(get_string('move'), $url, 'dragdrop', 'i');
     }
 
     public function item_html($extraargs = array()){
