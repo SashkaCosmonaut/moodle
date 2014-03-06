@@ -63,21 +63,6 @@ class question_category_list extends moodle_list {
     public function get_records() {
         $this->records = get_categories_for_contexts($this->context->id, $this->sortby);
     }
-
-    /**
-     * Get image icon from specified folder with a link for category.
-     *
-     * @param string $action Describes the action of icon.
-     * @param string $url Url for the link of icon.
-     * @param string $icon Icon name.
-     * @param string string $folder Folder where icon placed.
-     * @return string HTML code of icon and its link.
-     */
-    public function image_icon($action, $url, $icon, $folder = 't') {
-        global $OUTPUT;
-        return '<a title="' . s($action) .'" href="'.$url.'">
-                <img src="' . $OUTPUT->pix_url($folder.'/'.$icon) . '" class="iconsmall" alt="' . s($action). '" /></a> ';
-    }
 }
 
 
@@ -137,6 +122,21 @@ class question_category_list_item extends list_item {
         }
 
         return $item;
+    }
+
+    /**
+     * Get image icon from specified folder with a link for category.
+     *
+     * @param string $action Describes the action of icon.
+     * @param string $url Url for the link of icon.
+     * @param string $icon Icon name.
+     * @param string string $folder Folder where icon placed.
+     * @return string HTML code of icon and its link.
+     */
+    public function image_icon($action, $url, $icon, $folder = 't') {
+        global $OUTPUT;
+        return '<a title="' . s($action) .'" href="'.$url.'">
+                <img src="' . $OUTPUT->pix_url($folder.'/'.$icon) . '" class="iconsmall" alt="' . s($action). '" /></a> ';
     }
 }
 
