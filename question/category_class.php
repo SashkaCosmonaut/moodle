@@ -70,6 +70,39 @@ class question_category_list extends moodle_list {
     }
 
     /**
+     * The overridden method which returns html string of the list.
+     *
+     * @param integer $indent depth of indentation.
+     */
+    public function to_html($indent=0, $extraargs=array()) {
+        if (count($this->items)) {
+            $tabs = str_repeat("\t", $indent);
+            $html = '';
+
+            foreach ($this->items as $item) {
+                if ($this->editable) {
+                    $item->set_icon_html();
+                }
+                if ($itemhtml = $item->to_html($indent+1, $extraargs)) {
+                    $html .= "$tabs\t<li".((!empty($item->attributes))?(' '.$item->attributes):'').">";
+                    $html .= $itemhtml;
+                    $html .= "</li>\n";
+                }
+            }
+        } else {
+            $html = '';
+        }
+        if ($html) { //if there are list items to display then wrap them in ul / ol tag.
+            $tabs = str_repeat("\t", $indent);
+            $html = $tabs.'<'.$this->type.((!empty($this->attributes))?(' '.$this->attributes):'').">\n".$html;
+            $html .= $tabs."</".$this->type.">\n";
+        } else {
+            $html ='';
+        }
+        return $html;
+    }
+
+    /**
      * Перевести список в режим перемещения указанной категории.
      */
     public function set_movement_mode() {
