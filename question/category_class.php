@@ -154,7 +154,7 @@ class question_category_list_item extends list_item {
 
         // Generate url for the link of the icon and set this icon.
         $url = new moodle_url($this->parentlist->pageurl, (array('sesskey'=>sesskey(), 'move'=>$this->id)));
-        $this->icons['move'] = $this->image_icon(get_string('move'), $url, 'dragdrop', 'i');
+        $this->icons['move'] = $this->image_icon(get_string('movecategory','question'), $url, 'dragdrop', 'i');
     }
 
     public function item_html($extraargs = array()){
@@ -345,12 +345,34 @@ class question_category_object {
                 echo $OUTPUT->box_start('boxwidthwide boxaligncenter generalbox questioncategories contextlevel' . $list->context->contextlevel);
                 $fullcontext = context::instance_by_id($context);
                 echo $OUTPUT->heading(get_string('questioncatsfor', 'question', $fullcontext->get_context_name()), 3);
+
+                echo $this->get_movement_message($list);  // Выводим сообщение об отмене перемещения, если оно идет.
+
                 echo $listhtml;
                 echo $OUTPUT->box_end();
             }
         }
         echo $list->display_page_numbers();
      }
+
+    /**
+     * Выводит сообщение о том, что идет перемещение категории, а также ссылку для его отмены.
+     * @param question_category_list $list Отображаемый список.
+     * @return string Строка с сообщением о перемещении и ссылкой его отмены.
+     */
+    public function get_movement_message($list) {
+        // Если идет перемещение и в данном списке содержится перемещаемая категория
+        if ($this->movedcatid && $item = $list->find_item($this->movedcatid, true)) {
+            $cancelstring = get_string('movecategory','question').': ';     // Добавляем пояснение
+            $cancelstring .= html_writer::tag('b',$item->name);             // Добавляем имя категории
+
+            $url = new moodle_url($this->pageurl, (array('sesskey'=>sesskey(), 'cancel'=>1)));  // Формируем URL для "Отмены"
+
+            $cancelstring .= ' ('.html_writer::link($url, get_string('cancel')).')';    // Добавляем ссылку "Отмена"
+            return $cancelstring; // Выводим сообщение
+        }
+        return '';
+    }
 
     /**
      * gets all the courseids for the given categories
