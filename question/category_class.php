@@ -63,6 +63,38 @@ class question_category_list extends moodle_list {
     public function get_records() {
         $this->records = get_categories_for_contexts($this->context->id, $this->sortby);
     }
+
+    /**
+     * Перевести список в режим перемещения указанной категории.
+     */
+    public function set_movement_mode() {
+
+    }
+
+    /**
+     * Отменить режим перемещения списка и перевести его в обычный режим.
+     */
+    public function cancel_movement_mode() {
+
+    }
+
+    /**
+     * Переместить запись в списке после другой записи в данном списке.
+     * @param integer $movedrecord Идентификатор перемещаемой записи списка.
+     * @param integer $upperrecord Идентификатор записи, после которой вставляется перемещаемая запись.
+     */
+    public function move_item_after($movedrecord, $upperrecord) {
+
+    }
+
+    /**
+     * Переместить запись в качестве дочверней другой записи.
+     * @param integer $movedrecord Идентификатор перемещаемой записи списка.
+     * @param integer $parentrecord Идентификатор родительской записи.
+     */
+    public function move_item_in($movedrecord, $parentrecord) {
+
+    }
 }
 
 
