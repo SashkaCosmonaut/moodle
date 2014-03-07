@@ -75,18 +75,9 @@ class question_category_list extends moodle_list {
      * @param integer $indent depth of indentation.
      */
     public function to_html($indent=0, $extraargs=array()) {
-        global $OUTPUT;
-
         if (count($this->items)) {
             $tabs = str_repeat("\t", $indent);
             $html = '';
-
-            if ($this->movementmode) {
-                $movingpix = new pix_icon('movehere', get_string('movehere'), 'moodle', array('class' => 'movetarget'));
-                $movingurl = new moodle_url($this->pageurl, array('moveto' => 0, 'sesskey' => sesskey()));
-                $html .= html_writer::tag('li', html_writer::link($movingurl, $OUTPUT->render($movingpix)),
-                    array('class' => 'movehere', 'title' => 'qwe'));
-            }
 
             foreach ($this->items as $item) {
                 if ($this->editable) {
@@ -211,6 +202,19 @@ class question_category_list_item extends list_item {
         global $OUTPUT;
         return '<a title="' . s($action) .'" href="'.$url.'">
                 <img src="' . $OUTPUT->pix_url($folder.'/'.$icon) . '" class="iconsmall" alt="' . s($action). '" /></a> ';
+    }
+
+    /**
+     * Получить html код для вставки области для перемещения в нее элемента списка.
+     * @param string $movingurl Адрес ссылки вставляемой области.
+     * @param array $attributes Массив дополнительных параметров ссылки.
+     * @return string HTML код вставки области для перемещения в нее элемента списка.
+     */
+    public static function get_move_in_html($movingurl, $attributes = array()) {
+        global $OUTPUT;
+
+        $movingpix = new pix_icon('movehere', get_string('movehere'), 'moodle', array('class' => 'movetarget'));
+        return html_writer::link($movingurl, $OUTPUT->render($movingpix), $attributes);
     }
 }
 
