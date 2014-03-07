@@ -93,13 +93,30 @@ class question_category_list extends moodle_list {
             $html = '';
         }
         if ($html) { //if there are list items to display then wrap them in ul / ol tag.
+
+            $movefield = $this->get_html_move_field_context(); // Получаем код поля для вставки элемента списка в контекст.
+
             $tabs = str_repeat("\t", $indent);
-            $html = $tabs.'<'.$this->type.((!empty($this->attributes))?(' '.$this->attributes):'').">\n".$html;
+
+            // Поле для вставки элемента списка вставляется над самим списком.
+            $html = $tabs.'<'.$this->type.((!empty($this->attributes))?(' '.$this->attributes):'').">\n".$movefield.$html;
             $html .= $tabs."</".$this->type.">\n";
         } else {
             $html ='';
         }
         return $html;
+    }
+
+    /**
+     * Получить HTML-код для вставки области всего контекста для перемещения в нее элемента списка (для смены контекста).
+     * @return string Строка с HTML-кодом области для перемещения в контекст.
+     */
+    public function get_html_move_field_context() {
+        if ($this->movementmode && !$this->parentitem) {    // Если установлен режим перемещения и у данного списка нет родителя.
+            return question_category_list_item::get_move_in_html(new moodle_url($this->pageurl,
+                array('movetocontext' => $this->context->id, 'sesskey' => sesskey())));
+        }
+        return '';
     }
 
     /**
@@ -153,7 +170,7 @@ class question_category_list_item extends list_item {
         $this->icons['edit']= $this->image_icon(get_string('editthiscategory', 'question'), $url, 'edit');
 
         // Generate url for the link of the icon and set this icon.
-        $url = new moodle_url($this->parentlist->pageurl, (array('sesskey'=>sesskey(), 'move'=>$this->id)));
+        $url = new moodle_url($this->parentlist->pageurl, (array('move'=>$this->id, 'sesskey'=>sesskey())));
         $this->icons['move'] = $this->image_icon(get_string('movecategory','question'), $url, 'dragdrop', 'i');
     }
 
@@ -379,7 +396,7 @@ class question_category_object {
             $cancelstring = get_string('movecategory','question').': ';     // Добавляем пояснение
             $cancelstring .= html_writer::tag('b',$item->name);             // Добавляем имя категории
 
-            $url = new moodle_url($this->pageurl, (array('sesskey'=>sesskey(), 'cancel'=>1)));  // Формируем URL для "Отмены"
+            $url = new moodle_url($this->pageurl, (array('cancel'=>1, 'sesskey'=>sesskey())));  // Формируем URL для "Отмены"
 
             $cancelstring .= ' ('.html_writer::link($url, get_string('cancel')).')';    // Добавляем ссылку "Отмена"
             return $cancelstring; // Выводим сообщение
