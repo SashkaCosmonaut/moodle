@@ -295,6 +295,11 @@ class question_category_object {
     public $movedcatid = 0;
 
     /**
+     * @var int Идентификатор контекста перемещаемой категории.
+     */
+    public $movedcatcontextid = 0;
+
+    /**
      * Constructor
      *
      * Gets necessary strings and sets relevant path information
@@ -637,12 +642,14 @@ class question_category_object {
     /**
      * Обработка запроса на начало процесса перемещения категории.
      * @param int $movedcatid Идентификатор перемещаемой категории.
+     * @param int $contextid Идентификатор контекста перемещаемой категории.
      */
-    public function on_move($movedcatid) {
+    public function on_move($movedcatid, $contextid) {
         if ($movedcatid) {
             require_sesskey();
 
-            $this->movedcatid = $movedcatid;   // Сохраним идентификатор перемещаемой категории.
+            $this->movedcatid = $movedcatid;        // Сохраним идентификатор перемещаемой категории.
+            $this->movedcatcontextid = $contextid;  // Сохраним идентификатор контекста перемещаемой категории.
 
             // Переводим все имеющиеся списки в режим перемещения.
             foreach ($this->editlists as $list) {
@@ -659,7 +666,8 @@ class question_category_object {
         if ($iscanceled) {
             require_sesskey();
 
-            $this->movedcatid = 0;  // Больше никакая категория не перемещается.
+            $this->movedcatid = 0;          // Больше никакая категория не перемещается.
+            $this->movedcatcontextid = 0;
 
             // Отменяем во всех списках режим перемещения.
             foreach ($this->editlists as $list) {
