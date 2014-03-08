@@ -207,6 +207,28 @@ class question_category_list_item extends list_item {
     }
 
     /**
+     * Returns html
+     *
+     * @param integer $indent
+     * @param array $extraargs any extra data that is needed to print the list item
+     *                            may be used by sub class.
+     * @return string html
+     */
+    public function to_html($indent = 0, $extraargs = array()) {
+        if (!$this->display) {
+            return '';
+        }
+        $tabs = str_repeat("\t", $indent);
+
+        if (isset($this->children)) {
+            $childrenhtml = $this->children->to_html($indent+1, $extraargs);
+        } else {
+            $childrenhtml = '';
+        }
+        return $this->item_html($extraargs).'&nbsp;'.(join($this->icons, '')).'<br />qwe22'.(($childrenhtml !='')?("\n".$childrenhtml):'');
+    }
+
+    /**
      * Get image icon from specified folder with a link for category.
      *
      * @param string $action Describes the action of icon.
