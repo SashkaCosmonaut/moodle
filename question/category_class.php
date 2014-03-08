@@ -94,7 +94,7 @@ class question_category_list extends moodle_list {
         }
         if ($html) { //if there are list items to display then wrap them in ul / ol tag.
 
-            $movefield = $this->get_html_move_field_context(); // Получаем код поля для вставки элемента списка в контекст.
+            $movefield = $this->get_html_move_to_context_field(); // Получаем код поля для вставки элемента списка в контекст.
 
             $tabs = str_repeat("\t", $indent);
 
@@ -111,7 +111,7 @@ class question_category_list extends moodle_list {
      * Получить HTML-код для вставки области всего контекста для перемещения в нее элемента списка (для смены контекста).
      * @return string Строка с HTML-кодом области для перемещения в контекст.
      */
-    public function get_html_move_field_context() {
+    public function get_html_move_to_context_field() {
         if ($this->movementmode && !$this->parentitem) {    // Если установлен режим перемещения и у данного списка нет родителя.
             return question_category_list_item::get_move_field_html(new moodle_url($this->pageurl,
                 array('movetocontext' => $this->context->id, 'sesskey' => sesskey())));
