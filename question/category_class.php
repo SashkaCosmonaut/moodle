@@ -113,7 +113,7 @@ class question_category_list extends moodle_list {
      */
     public function get_html_move_field_context() {
         if ($this->movementmode && !$this->parentitem) {    // Если установлен режим перемещения и у данного списка нет родителя.
-            return question_category_list_item::get_move_in_html(new moodle_url($this->pageurl,
+            return question_category_list_item::get_move_field_html(new moodle_url($this->pageurl,
                 array('movetocontext' => $this->context->id, 'sesskey' => sesskey())));
         }
         return '';
@@ -223,11 +223,11 @@ class question_category_list_item extends list_item {
 
     /**
      * Получить html код для вставки области для перемещения в нее элемента списка.
-     * @param string $movingurl Адрес ссылки вставляемой области.
+     * @param moodle_url $movingurl Адрес ссылки вставляемой области.
      * @param array $attributes Массив дополнительных параметров ссылки.
      * @return string HTML код вставки области для перемещения в нее элемента списка.
      */
-    public static function get_move_in_html($movingurl, $attributes = array()) {
+    public static function get_move_field_html(moodle_url $movingurl, $attributes = array()) {
         global $OUTPUT;
 
         $movingpix = new pix_icon('movehere', get_string('movehere'), 'moodle', array('class' => 'movetarget'));
