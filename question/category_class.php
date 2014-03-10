@@ -94,7 +94,7 @@ class question_category_list extends moodle_list {
         }
         if ($html) { //if there are list items to display then wrap them in ul / ol tag.
 
-            $movefield = $this->get_html_move_to_context_field(); // Получаем код поля для вставки элемента списка в контекст.
+            $movefield = $this->get_html_move_to_context_field($movedcatid); // Получаем код поля для вставки элемента списка в контекст.
 
             $tabs = str_repeat("\t", $indent);
 
@@ -111,10 +111,13 @@ class question_category_list extends moodle_list {
      * Получить HTML-код для вставки области всего контекста для перемещения в нее элемента списка (для смены контекста).
      * @return string Строка с HTML-кодом области для перемещения в контекст.
      */
-    public function get_html_move_to_context_field() {
+    public function get_html_move_to_context_field($movedcatid) {
         if ($this->movementmode && !$this->parentitem) {    // Если установлен режим перемещения и у данного списка нет родителя.
             return question_category_list_item::get_move_field_html(new moodle_url($this->pageurl,
-                array('movetocontext' => $this->context->id, 'sesskey' => sesskey())));
+                array(
+                    'id' => $movedcatid,
+                    'movetocontext' => $this->context->id,
+                    'sesskey' => sesskey())));
         }
         return '';
     }
@@ -781,7 +784,7 @@ class question_category_object {
             $oldcat = $DB->get_record('question_categories', array('id' => $movedcatid), '*', MUST_EXIST);
 
             // Обновляем категорию, но без обновления страницы
-            $this->update_category($movedcatid, '0,'.$newcontextid, $oldcat->name, $oldcat->info,FORMAT_HTML, false);
+            $this->update_category($movedcatid, '0,'.$newcontextid, $oldcat->name, $oldcat->info,FORMAT_HTML);
         }
     }
 }
