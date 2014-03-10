@@ -197,7 +197,7 @@ class question_category_list_item extends list_item {
             'move'=>$this->id,
             'context' => $this->parentlist->context->id,
             'sesskey'=>sesskey()
-        ));
+        ),'move'.$this->parentlist->context->id);
         $this->icons['move'] = $this->image_icon(get_string('movecategory','question'), $url, 'dragdrop', 'i');
     }
 
@@ -254,6 +254,7 @@ class question_category_list_item extends list_item {
         }
 
         $result = $this->item_html($extraargs).'&nbsp;'.(join($this->icons, ''));
+        $result .= $this->get_move_in_field_html();
         $result .= $this->get_move_to_field_html();
         $result .= (($childrenhtml !='')?("\n".$childrenhtml):'');
         return $result;
@@ -277,12 +278,29 @@ class question_category_list_item extends list_item {
     }
 
     /**
+     * Получить HTML код области вставки элемента списка за каким-то другим элементом спска.
+     * @return string HTML код полученной области.
+     */
+    public function get_move_in_field_html() {
+        if ($this->parentlist->movementmode) {
+            return '<br />'.question_category_list_item::get_move_field_html(
+                new moodle_url($this->parentlist->pageurl, array(
+                    'movetocontext' => $this->parentlist->context->id,
+                    'movein' => $this->id,
+                    'sesskey' => sesskey()
+                )),array('style' => 'margin: 25px;'));
+        }
+
+        return '';
+    }
+
+    /**
      * Get image icon from specified folder with a link for category.
      *
      * @param string $action Describes the action of icon.
      * @param string $url Url for the link of icon.
      * @param string $icon Icon name.
-     * @param string string $folder Folder where icon placed.
+     * @param string string $folder Folder where icon is placed.
      * @return string HTML code of icon and its link.
      */
     public function image_icon($action, $url, $icon, $folder = 't') {
@@ -300,7 +318,9 @@ class question_category_list_item extends list_item {
     public static function get_move_field_html(moodle_url $movingurl, $attributes = array()) {
         global $OUTPUT;
 
-        $movingpix = new pix_icon('movehere', get_string('movehere'), 'moodle', array('class' => 'movetarget'));
+        $movingpix = new pix_icon('movehere', get_string('movehere'), 'moodle', array(
+            'class' => 'movetarget',
+            'style' => 'margin-top: 5px'));
         return html_writer::link($movingurl, $OUTPUT->render($movingpix), $attributes);
     }
 }
@@ -466,14 +486,15 @@ class question_category_object {
      * @return string Строка с сообщением о перемещении и ссылкой его отмены.
      */
     public function get_movement_message($list) {
-        // Если идет перемещение и в данном списке содержится перемещаемая категория
+        // Если идет перемещение и в данном списке содержится перемещаемая категория.
         if ($this->movedcatid && $item = $list->find_item($this->movedcatid, true)) {
-            $cancelstring = get_string('movecategory','question').': ';     // Добавляем пояснение
-            $cancelstring .= html_writer::tag('b',$item->name);             // Добавляем имя категории
+            $cancelstring = get_string('movecategory','question').': ';     // Добавляем пояснение.
+            $cancelstring .= html_writer::tag('b',$item->name);             // Добавляем имя категории.
 
-            $url = new moodle_url($this->pageurl, (array('cancel'=>1, 'sesskey'=>sesskey())));  // Формируем URL для "Отмены"
+            $url = new moodle_url($this->pageurl, (array('cancel'=>1, 'sesskey'=>sesskey())));  // Формируем URL для "Отмены".
 
-            $cancelstring .= ' ('.html_writer::link($url, get_string('cancel')).')';    // Добавляем ссылку "Отмена"
+            $cancelstring .= ' ('.html_writer::link($url, get_string('cancel'),
+                    array('name' => 'move'.$this->movedcatcontextid)).')';    // Добавляем ссылку "Отмена" с якорем.
             return $cancelstring; // Выводим сообщение
         }
         return '';
