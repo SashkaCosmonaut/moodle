@@ -773,8 +773,9 @@ class question_category_object {
      * Обработка запроса на перемещение категории в другой контекст.
      * @param int $movedcatid Идентификатор перемещаемой категории.
      * @param int $newcontextid Идентификатор нового контекста.
+     * @param bool $redirect Обновлять ли страницу после изменения контекста.
      */
-    public function on_move_to_context($movedcatid, $newcontextid) {
+    public function on_move_to_context($movedcatid, $newcontextid, $redirect) {
         global $DB;
 
         if ($movedcatid && $newcontextid) { // Если у перемещаемой категории изменился контекст.
@@ -784,7 +785,7 @@ class question_category_object {
             $oldcat = $DB->get_record('question_categories', array('id' => $movedcatid), '*', MUST_EXIST);
 
             // Обновляем категорию, но без обновления страницы
-            $this->update_category($movedcatid, '0,'.$newcontextid, $oldcat->name, $oldcat->info,FORMAT_HTML);
+            $this->update_category($movedcatid, '0,'.$newcontextid, $oldcat->name, $oldcat->info,FORMAT_HTML, $redirect);
         }
     }
 }

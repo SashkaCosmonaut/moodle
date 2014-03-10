@@ -57,9 +57,10 @@ $qcobject = new question_category_object($pagevars['cpage'], $thispageurl,
         $pagevars['cat'], $param->delete, $contexts->having_cap('moodle/question:add'));
 
 $qcobject->on_move($param->move);                     // Если начали перемещать категорию.
-$qcobject->on_move_to_context($param->id, $param->movetocontext); // Если переместили в другой контекст.
-$qcobject->on_move_to($param->id, $param->moveto);                // Если категорию переместили под другой категорией в этом же контексте.
-$qcobject->on_move_in($param->id, $param->movein);                // Если категорию сделали дочерней другой категории в этом же контексте.
+$qcobject->on_move_to_context($param->id, $param->movetocontext,
+    !($param->moveto || $param->movein));             // Если переместили в другой контекст.
+$qcobject->on_move_to($param->id, $param->moveto);    // Если категорию переместили под другой категорией в этом же контексте.
+$qcobject->on_move_in($param->id, $param->movein);    // Если категорию сделали дочерней другой категории в этом же контексте.
 
 if (!($param->move || $param->movetocontext || $param->moveto || $param->movein)) { // Если требуемых параметров нет.
     $qcobject->on_cancel_moove();   // Отменили перемещение категории.
