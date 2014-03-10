@@ -124,6 +124,10 @@ class question_category_list extends moodle_list {
      */
     public function set_movement_mode() {
         $this->movementmode = true;
+
+        foreach ($this->items as $item) {   // Сообщим о переходе в режим перемещения потомкам.
+            $item->children->set_movement_mode();
+        }
     }
 
     /**
@@ -131,6 +135,10 @@ class question_category_list extends moodle_list {
      */
     public function cancel_movement_mode() {
         $this->movementmode = false;
+
+        foreach ($this->items as $item) {   // Сообщим об отмене режима перемещения потомкам.
+            $item->children->cancel_movement_mode();
+        }
     }
 
     /**
@@ -162,6 +170,21 @@ class question_category_list extends moodle_list {
 class question_category_list_item extends list_item {
 
     /**
+     * Override the constructor.
+     * @param mixed $item fragment of html for list item or record
+     * @param object $parent reference to parent of this item
+     * @param string $attributes attributes for li tag
+     * @param boolean $display whether this item is displayed. Some items may be loaded so we have a complete
+     *                              structure in memory to work with for actions but are not displayed.
+     * @return list_item
+     */
+    public function __construct($item, $parent, $attributes = '', $display = true) {
+        parent::__construct($item, $parent, $attributes, $display);
+
+        $this->children->context = $parent->context;    // Передадим потомкам контекст.
+    }
+
+    /**
      * Set icons to category in the list.
      */
     public function set_icon_html(){
@@ -170,7 +193,11 @@ class question_category_list_item extends list_item {
         $this->icons['edit']= $this->image_icon(get_string('editthiscategory', 'question'), $url, 'edit');
 
         // Generate url for the link of the icon and set this icon.
-        $url = new moodle_url($this->parentlist->pageurl, (array('move'=>$this->id, 'sesskey'=>sesskey())));
+        $url = new moodle_url($this->parentlist->pageurl, array(
+            'move'=>$this->id,
+            'context' => $this->parentlist->context->id,
+            'sesskey'=>sesskey()
+        ));
         $this->icons['move'] = $this->image_icon(get_string('movecategory','question'), $url, 'dragdrop', 'i');
     }
 
@@ -225,7 +252,28 @@ class question_category_list_item extends list_item {
         } else {
             $childrenhtml = '';
         }
-        return $this->item_html($extraargs).'&nbsp;'.(join($this->icons, '')).'<br />qwe22'.(($childrenhtml !='')?("\n".$childrenhtml):'');
+
+        $result = $this->item_html($extraargs).'&nbsp;'.(join($this->icons, ''));
+        $result .= $this->get_move_to_field_html();
+        $result .= (($childrenhtml !='')?("\n".$childrenhtml):'');
+        return $result;
+    }
+
+    /**
+     * Получить HTML код области вставки элемента списка за каким-то другим элементом спска.
+     * @return string HTML код полученной области.
+     */
+    public function get_move_to_field_html() {
+        if ($this->parentlist->movementmode) {
+            return '<br />'.question_category_list_item::get_move_field_html(
+                    new moodle_url($this->parentlist->pageurl, array(
+                        'movetocontext' => $this->parentlist->context->id,
+                        'moveto' => $this->id,
+                        'sesskey' => sesskey()
+                    )));
+        }
+
+        return '';
     }
 
     /**
@@ -295,7 +343,7 @@ class question_category_object {
     public $movedcatid = 0;
 
     /**
-     * @var int Идентификатор контекста перемещаемой категории.
+     * @var int Идентификатор контекста перемещаемой категории. Хранится, чтобы лишний раз не вычислять и не обновлять его.
      */
     public $movedcatcontextid = 0;
 
@@ -709,13 +757,11 @@ class question_category_object {
     /**
      * Обработка запроса на перемещение категории в другой контекст.
      * @param int $newcontextid Идентификатор нового контекста.
-     * @param int $uppercatid Идентификатор категории, за окторой вставили перемещаемую категорию.
-     * @param int $parentcatid Идентификатор родительской категории, для которой перемещаемая категория стала дочерней.
      */
-    public function on_move_to_context($newcontextid, $uppercatid = 0, $parentcatid = 0) {
+    public function on_move_to_context($newcontextid) {
         global $DB;
 
-        if ($newcontextid) {
+        if ($newcontextid && $newcontextid != $this->movedcatcontextid) { // Если у перемещаемой категории изменился контекст.
             require_sesskey();
 
             // Изменяем контекст у перемещаемой категории.
@@ -723,9 +769,6 @@ class question_category_object {
 
             // Обновляем категорию, но без обновления страницы
             $this->update_category($this->movedcatid, '0,'.$newcontextid, $oldcat->name, $oldcat->info,FORMAT_HTML, false);
-
-            $this->on_move_to($uppercatid);     // Проверить, если перемещаемую категорию еще и вставили за категорией.
-            $this->on_move_in($parentcatid);    // Проверить, если перемещаемую категорию еще и сделали потомком категории.
         }
     }
 }
@@ -740,8 +783,8 @@ function pre_print($smth, $msg="") {
     if ($msg != "") { echo "===== ".$msg.": =====<br/><br/>"; }
 
     ?>
-    <pre>
+        <pre>
             <?print_r($smth);?>
         </pre>
-<?
+    <?
 }

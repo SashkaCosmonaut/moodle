@@ -56,11 +56,11 @@ $qcobject = new question_category_object($pagevars['cpage'], $thispageurl,
         $contexts->having_one_edit_tab_cap('categories'), $param->edit,
         $pagevars['cat'], $param->delete, $contexts->having_cap('moodle/question:add'));
 
-$qcobject->on_move($param->move, $param->context);  // Если начали перемещать категорию.
-$qcobject->on_cancel_moove($param->cancel);         // Если отменили перемещение категории.
-$qcobject->on_move_to($param->moveto);              // Если категорию переместили под другой категорией в этом же контексте.
-$qcobject->on_move_in($param->movein);              // Если категорию сделали дочерней другой категории в этом же контексте.
-$qcobject->on_move_to_context($param->movetocontext, $param->moveto, $param->movein);   // Если переместили в другой контекст.
+$qcobject->on_move($param->move, $param->context);    // Если начали перемещать категорию.
+$qcobject->on_cancel_moove($param->cancel);           // Если отменили перемещение категории.
+$qcobject->on_move_to_context($param->movetocontext); // Если переместили в другой контекст.
+$qcobject->on_move_to($param->moveto);                // Если категорию переместили под другой категорией в этом же контексте.
+$qcobject->on_move_in($param->movein);                // Если категорию сделали дочерней другой категории в этом же контексте.
 
 if ($param->delete && ($questionstomove = $DB->count_records("question", array("category" => $param->delete)))) {
     if (!$category = $DB->get_record("question_categories", array("id" => $param->delete))) {  // security
