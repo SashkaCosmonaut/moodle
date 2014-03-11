@@ -150,7 +150,20 @@ class question_category_list extends moodle_list {
      * @param integer $upperrecord Идентификатор записи, после которой вставляется перемещаемая запись.
      */
     public function move_item_after($movedrecord, $upperrecord) {
-        $this->movementmode = false;
+
+        if (!array_key_exists($upperrecord, $this->records)) {  // Если перемещаемая категория не в этом списке, выходим.
+            return;
+        }
+
+        $peers = $this->get_items_peers($upperrecord);          // Получаем соседей верхней категории.
+        $upperrecordkey = array_search($upperrecord, $peers);   // Получаем индекс верхней категории в массиве соседей.
+
+        // Вставляем перемещаемою категорию после верхней категории в массиве соседей.
+        $newpeers = array_merge(array_slice($peers, 0, $upperrecordkey+1), array($movedrecord), array_slice($peers, $upperrecordkey+1));
+        $this->reorder_peers($newpeers);    // Переупорядочиваем соседей.
+        $this->movementmode = false;        // Перемещение закончено.
+
+        redirect($this->pageurl);           // Обновляем страницу.
     }
 
     /**
@@ -490,9 +503,9 @@ class question_category_object {
             $cancelstring = get_string('movecategory','question').': ';     // Добавляем пояснение.
             $cancelstring .= html_writer::tag('b',$item->name);             // Добавляем имя категории.
 
-            $url = new moodle_url($this->pageurl, (array('cancel'=>1, 'sesskey'=>sesskey())));  // Формируем URL для "Отмены".
+            $url = new moodle_url($this->pageurl, array('sesskey'=>sesskey()));  // Формируем URL для "Отмены".
 
-            $cancelstring .= ' ('.html_writer::link($url, get_string('cancel'),
+            $cancelstring .= ' ('.html_writer::link($url, $this->str->cancel,
                     array('name' => 'move'.$item->parentlist->context->id)).')';    // Добавляем ссылку "Отмена" с якорем.
             return $cancelstring; // Выводим сообщение
         }
