@@ -42,7 +42,6 @@ $param->id = optional_param('id', 0, PARAM_INT);      // Контекст пер
 $param->moveto = optional_param('moveto', 0, PARAM_INT);        // Поместить над какой-то другой категории с указанным id
 $param->movetocontext = optional_param('movetocontext', 0, PARAM_INT);  // Поместить в конец списка категорий в контексте или в пустой контекст с указанным id
 $param->movein = optional_param('movein', 0, PARAM_INT);        // Поместить в подкатегорию категории с указанным id (под категорией)
-$param->cancel = optional_param('cancel', '', PARAM_INT);       // Отмена перемещения
 
 $url = new moodle_url($thispageurl);
 foreach ((array)$param as $key=>$value) {
@@ -56,15 +55,9 @@ $qcobject = new question_category_object($pagevars['cpage'], $thispageurl,
         $contexts->having_one_edit_tab_cap('categories'), $param->edit,
         $pagevars['cat'], $param->delete, $contexts->having_cap('moodle/question:add'));
 
-$qcobject->on_move($param->move);                     // Если начали перемещать категорию.
-$qcobject->on_move_to_context($param->id, $param->movetocontext,
-    !($param->moveto || $param->movein));             // Если переместили в другой контекст.
-$qcobject->on_move_to($param->id, $param->moveto);    // Если категорию переместили под другой категорией в этом же контексте.
-$qcobject->on_move_in($param->id, $param->movein);    // Если категорию сделали дочерней другой категории в этом же контексте.
-
-if (!($param->move || $param->movetocontext || $param->moveto || $param->movein)) { // Если требуемых параметров нет.
-    $qcobject->on_cancel_moove();   // Отменили перемещение категории.
-}
+$qcobject->try_move_start($param->move);  // Если начали перемещать категорию.
+$qcobject->try_move_finish($param->id, $param->movetocontext, $param->moveto, $param->movein);
+$qcobject->try_move_cancel($param->id, $param->movetocontext, $param->moveto, $param->movein);             // Отменили перемещение категории.
 
 if ($param->delete && ($questionstomove = $DB->count_records("question", array("category" => $param->delete)))) {
     if (!$category = $DB->get_record("question_categories", array("id" => $param->delete))) {  // security
