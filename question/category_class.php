@@ -766,12 +766,14 @@ class question_category_object {
                               sortorder = @sort := @sort + 1
                           WHERE
                               id <> :id AND
+                              id <> :movedcatid AND
                               sortorder >= :sortorder AND
                               contextid = :contextid AND
                               parent = :parent
                           ORDER BY sortorder",
                 array(
                     'id' => $uppercatid,
+                    'movedcatid' => $movedcatid,
                     'sortorder' => $uppercat->sortorder,
                     'contextid' => $uppercat->contextid,
                     'parent' => $uppercat->parent));
