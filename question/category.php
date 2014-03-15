@@ -39,7 +39,7 @@ $param->edit = optional_param('edit', 0, PARAM_INT);
 
 $param->move = optional_param('move', 0, PARAM_INT);            // Старт перемещения категории с указанным id
 $param->id = optional_param('id', 0, PARAM_INT);      // Контекст перемещаемой категории
-$param->moveto = optional_param('moveto', 0, PARAM_INT);        // Поместить над какой-то другой категории с указанным id
+$param->moveafter = optional_param('moveafter', 0, PARAM_INT);        // Поместить над какой-то другой категории с указанным id
 $param->movetocontext = optional_param('movetocontext', 0, PARAM_INT);  // Поместить в конец списка категорий в контексте или в пустой контекст с указанным id
 $param->movein = optional_param('movein', 0, PARAM_INT);        // Поместить в подкатегорию категории с указанным id (под категорией)
 
@@ -56,8 +56,8 @@ $qcobject = new question_category_object($pagevars['cpage'], $thispageurl,
         $pagevars['cat'], $param->delete, $contexts->having_cap('moodle/question:add'));
 
 $qcobject->try_move_start($param->move);  // Если начали перемещать категорию.
-$qcobject->try_move_finish($param->id, $param->movetocontext, $param->moveto, $param->movein);
-$qcobject->try_move_cancel($param->id, $param->movetocontext, $param->moveto, $param->movein);             // Отменили перемещение категории.
+$qcobject->try_move_finish($param->id, $param->movetocontext, $param->moveafter, $param->movein);
+$qcobject->try_move_cancel($param->id, $param->movetocontext, $param->moveafter, $param->movein);             // Отменили перемещение категории.
 
 if ($param->delete && ($questionstomove = $DB->count_records("question", array("category" => $param->delete)))) {
     if (!$category = $DB->get_record("question_categories", array("id" => $param->delete))) {  // security

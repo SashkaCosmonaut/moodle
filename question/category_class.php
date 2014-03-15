@@ -257,7 +257,7 @@ class question_category_list_item extends list_item {
             return '<br />'.question_category_list_item::get_move_field_html(
                     new moodle_url($this->parentlist->pageurl, array(
                         'id' => $movedcatid,
-                        'moveto' => $this->id,
+                        'moveafter' => $this->id,
                         'sesskey' => sesskey()
                     )));
         }
@@ -738,7 +738,7 @@ class question_category_object {
         }
 
         if($uppercatid) {       // Если нужно переместить категорию под другой категорией.
-            $this->on_move_to($movedcatid, $uppercatid, $movedcat->name, $movedcat->info);
+            $this->on_move_after($movedcatid, $uppercatid, $movedcat->name, $movedcat->info);
         }
 
         if ($parentcatid) {     // Если нужно переместить категорию в другую категорию.
@@ -784,7 +784,7 @@ class question_category_object {
      * @param $movedcatname Название перемещаемой категории.
      * @param $movedcatinfo Информация перемещаемой категории.
      */
-    public function on_move_to($movedcatid, $uppercatid, $movedcatname, $movedcatinfo) {
+    public function on_move_after($movedcatid, $uppercatid, $movedcatname, $movedcatinfo) {
         global $DB;
 
         // Получсаем из БД вышестоящую категорию.
