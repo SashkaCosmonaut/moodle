@@ -724,7 +724,7 @@ class question_category_object {
     public function try_move_finish($movedcatid, $contextid, $uppercatid, $parentcatid) {
         global $DB;
 
-        if (!($movedcatid)) {
+        if (!($movedcatid)) {   // Если нет перемещаемой категории, то нет и перемещения.
             return;
         }
 
@@ -733,76 +733,122 @@ class question_category_object {
         // Получаем из БД перемещаемую категорию.
         $movedcat = $DB->get_record('question_categories', array('id' => $movedcatid), '*', MUST_EXIST);
 
-        if ($contextid) {   // Если нужно переместить категорию на вершину списка в другом контексте.
-            $DB->execute("SET @sort = 0");     // Инициализируем переменную для сортировки.
-
-            // Обновляем индексы порядка сортировки всех записей в списке данного родителя данного контекста ...
-            // ... в том же порядке, что они и были изначально, только теперь они с 1 и до N.
-            $DB->execute("UPDATE
-                              {question_categories}
-                          SET
-                              sortorder = @sort := @sort + 1
-                          WHERE
-                              id <> :id AND
-                              contextid = :contextid AND
-                              parent = 0
-                          ORDER BY sortorder",
-                array('id' => $movedcatid, 'contextid' => $contextid));
-
-            // Обновим контекст категории  и ее индекс порядка сортировки (равный 0), НЕ обновляем страницу.
-            $this->update_category($movedcatid, '0,'.$contextid, $movedcat->name, $movedcat->info, FORMAT_HTML, 0, false);
+        if ($contextid) {       // Если нужно переместить категорию на вершину списка в другом контексте.
+            $this->on_move_to_context($movedcatid, $contextid, $movedcat->name, $movedcat->info);
         }
 
-        if($uppercatid) {
-            $uppercat = $DB->get_record('question_categories', array('id' => $uppercatid), '*', MUST_EXIST);
-
-            $DB->execute("SET @sort = :sort", array('sort' => $uppercat->sortorder + 1));
-
-            $DB->execute("UPDATE
-                              {question_categories}
-                          SET
-                              sortorder = @sort := @sort + 1
-                          WHERE
-                              id <> :id AND
-                              id <> :movedcatid AND
-                              sortorder >= :sortorder AND
-                              contextid = :contextid AND
-                              parent = :parent
-                          ORDER BY sortorder",
-                array(
-                    'id' => $uppercatid,
-                    'movedcatid' => $movedcatid,
-                    'sortorder' => $uppercat->sortorder,
-                    'contextid' => $uppercat->contextid,
-                    'parent' => $uppercat->parent));
-
-            $this->update_category($movedcatid, $uppercat->parent.','.$uppercat->contextid, $movedcat->name, $movedcat->info,
-                FORMAT_HTML, $uppercat->sortorder + 1, false);
+        if($uppercatid) {       // Если нужно переместить категорию под другой категорией.
+            $this->on_move_to($movedcatid, $uppercatid, $movedcat->name, $movedcat->info);
         }
 
-        if ($parentcatid) {
-            $parentcat = $DB->get_record('question_categories', array('id' => $parentcatid), '*', MUST_EXIST);
-
-            $DB->execute("SET @sort = 0");     // Инициализируем переменную для сортировки.
-
-            // Обновляем индексы порядка сортировки всех записей в списке данного родителя данного контекста ...
-            // ... в том же порядке, что они и были изначально, только теперь они с 1 и до N.
-            $DB->execute("UPDATE
-                              {question_categories}
-                          SET
-                              sortorder = @sort := @sort + 1
-                          WHERE
-                              id <> :id AND
-                              contextid = :contextid AND
-                              parent = :parent
-                          ORDER BY sortorder",
-                array('id' => $movedcatid, 'contextid' => $parentcat->contextid, 'parent' => $parentcatid));
-
-            // Обновим контекст категории  и ее индекс порядка сортировки (равный 0), НЕ обновляем страницу.
-            $this->update_category($movedcatid, $parentcatid.','.$parentcat->contextid, $movedcat->name, $movedcat->info, FORMAT_HTML, 0, false);
+        if ($parentcatid) {     // Если нужно переместить категорию в другую категорию.
+            $this->on_move_in($movedcatid, $parentcatid, $movedcat->name, $movedcat->info);
         }
 
         redirect($this->pageurl);
+    }
+
+    /**
+     * Переместить категорию в другой контекст.
+     * @param $movedcatid Идентификатор перемещаемой категории.
+     * @param $contextid Идентификатор контекста, куда категория перемещается.
+     * @param $movedcatname Название перемещаемой категории.
+     * @param $movedcatinfo Информация перемещаемой категории.
+     */
+    public function on_move_to_context($movedcatid, $contextid, $movedcatname, $movedcatinfo) {
+        global $DB;
+
+        $DB->execute("SET @sort = 0");     // Инициализируем переменную для сортировки.
+
+        // Обновляем индексы порядка сортировки всех записей в списке данного родителя данного контекста ...
+        // ... в том же порядке, что они и были изначально, только теперь они с 1 и до N.
+        $DB->execute("UPDATE
+                          {question_categories}
+                      SET
+                          sortorder = @sort := @sort + 1
+                      WHERE
+                          id <> :id AND
+                          contextid = :contextid AND
+                          parent = 0
+                      ORDER BY sortorder",
+            array('id' => $movedcatid, 'contextid' => $contextid));
+
+        // Обновим контекст категории и ее индекс порядка сортировки (равный 0), НЕ обновляем страницу.
+        $this->update_category($movedcatid, '0,'.$contextid, $movedcatname, $movedcatinfo, FORMAT_HTML, 0, false);
+    }
+
+    /**
+     * Переместить категорию под другую категорию.
+     * @param $movedcatid Идентификатор перемещаемой категории.
+     * @param $uppercatid Идентификатор категории, под которую нужно переместить категорию.
+     * @param $movedcatname Название перемещаемой категории.
+     * @param $movedcatinfo Информация перемещаемой категории.
+     */
+    public function on_move_to($movedcatid, $uppercatid, $movedcatname, $movedcatinfo) {
+        global $DB;
+
+        // Получсаем из БД вышестоящую категорию.
+        $uppercat = $DB->get_record('question_categories', array('id' => $uppercatid), '*', MUST_EXIST);
+
+        // Индексы порядка для категорий будут начинаться с индекса вышестоящей категории + 1.
+        $DB->execute("SET @sort = :sort", array('sort' => $uppercat->sortorder + 1));
+
+        // Обновляем индексы порядка всех категорий, что после вышестоящей категории.
+        $DB->execute("UPDATE
+                          {question_categories}
+                      SET
+                          sortorder = @sort := @sort + 1
+                      WHERE
+                          id <> :id AND
+                          id <> :movedcatid AND
+                          sortorder >= :sortorder AND
+                          contextid = :contextid AND
+                          parent = :parent
+                      ORDER BY sortorder",
+            array(
+                'id' => $uppercatid,
+                'movedcatid' => $movedcatid,
+                'sortorder' => $uppercat->sortorder,
+                'contextid' => $uppercat->contextid,
+                'parent' => $uppercat->parent));
+
+        // Обновим родителя и контекст перемещаемой категории, а индекс порядка сортировки у нее равен индексу ...
+        // ... вышестоящей категории + 1, НЕ обновляем страницу.
+        $this->update_category($movedcatid, $uppercat->parent.','.$uppercat->contextid, $movedcatname, $movedcatinfo,
+            FORMAT_HTML, $uppercat->sortorder + 1, false);
+    }
+
+    /**
+     * Переместить категорию внутрь другой категории.
+     * @param $movedcatid Идентификатор перемещаемой категории.
+     * @param $parentcatid Идентификатор родительской категории, в которую нужно переместить категорию.
+     * @param $movedcatname Название перемещаемой категории.
+     * @param $movedcatinfo Информация перемещаемой категории.
+     */
+    public function on_move_in($movedcatid, $parentcatid, $movedcatname, $movedcatinfo) {
+        global $DB;
+
+        // Получсаем из БД родительскую категорию.
+        $parentcat = $DB->get_record('question_categories', array('id' => $parentcatid), '*', MUST_EXIST);
+
+        $DB->execute("SET @sort = 0");     // Инициализируем переменную для сортировки.
+
+        // Обновляем индексы порядка сортировки всех записей в списке данного родителя данного контекста ...
+        // ... в том же порядке, что они и были изначально, только теперь они с 1 и до N.
+        $DB->execute("UPDATE
+                          {question_categories}
+                      SET
+                          sortorder = @sort := @sort + 1
+                      WHERE
+                          id <> :id AND
+                          contextid = :contextid AND
+                          parent = :parent
+                      ORDER BY sortorder",
+            array('id' => $movedcatid, 'contextid' => $parentcat->contextid, 'parent' => $parentcatid));
+
+        // Обновим контекст категории, ее родителя и ее индекс порядка сортировки (равный 0), НЕ обновляем страницу.
+        $this->update_category($movedcatid, $parentcatid.','.$parentcat->contextid, $movedcatname, $movedcatinfo,
+            FORMAT_HTML, 0, false);
     }
 
     /**
