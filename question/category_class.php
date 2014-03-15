@@ -257,7 +257,6 @@ class question_category_list_item extends list_item {
             return '<br />'.question_category_list_item::get_move_field_html(
                     new moodle_url($this->parentlist->pageurl, array(
                         'id' => $movedcatid,
-                        'movetocontext' => $this->parentlist->context->id,
                         'moveto' => $this->id,
                         'sesskey' => sesskey()
                     )));
@@ -275,7 +274,6 @@ class question_category_list_item extends list_item {
             return '<br />'.question_category_list_item::get_move_field_html(
                 new moodle_url($this->parentlist->pageurl, array(
                     'id' => $movedcatid,
-                    'movetocontext' => $this->parentlist->context->id,
                     'movein' => $this->id,
                     'sesskey' => sesskey()
                 )), array('style' => 'margin: 25px;'));
@@ -726,7 +724,7 @@ class question_category_object {
     public function try_move_finish($movedcatid, $contextid, $uppercatid, $parentcatid) {
         global $DB;
 
-        if (!($movedcatid && $contextid)) {
+        if (!($movedcatid)) {
             return;
         }
 
@@ -735,7 +733,7 @@ class question_category_object {
         // Получаем из БД перемещаемую категорию.
         $movedcat = $DB->get_record('question_categories', array('id' => $movedcatid), '*', MUST_EXIST);
 
-        if (!$uppercatid && !$parentcatid) {   // Если нужно переместить категорию на вершину списка в другом контексте.
+        if ($contextid) {   // Если нужно переместить категорию на вершину списка в другом контексте.
             $DB->execute("SET @sort = 0");     // Инициализируем переменную для сортировки.
 
             // Обновляем индексы порядка сортировки всех записей в списке данного родителя данного контекста ...
@@ -778,7 +776,7 @@ class question_category_object {
                     'contextid' => $uppercat->contextid,
                     'parent' => $uppercat->parent));
 
-            $this->update_category($movedcatid, $uppercat->parent.','.$contextid, $movedcat->name, $movedcat->info,
+            $this->update_category($movedcatid, $uppercat->parent.','.$uppercat->contextid, $movedcat->name, $movedcat->info,
                 FORMAT_HTML, $uppercat->sortorder + 1, false);
         }
 
@@ -801,7 +799,7 @@ class question_category_object {
                 array('id' => $movedcatid, 'contextid' => $parentcat->contextid, 'parent' => $parentcatid));
 
             // Обновим контекст категории  и ее индекс порядка сортировки (равный 0), НЕ обновляем страницу.
-            $this->update_category($movedcatid, $parentcatid.','.$contextid, $movedcat->name, $movedcat->info, FORMAT_HTML, 0, false);
+            $this->update_category($movedcatid, $parentcatid.','.$parentcat->contextid, $movedcat->name, $movedcat->info, FORMAT_HTML, 0, false);
         }
 
         redirect($this->pageurl);
