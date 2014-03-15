@@ -242,8 +242,8 @@ class question_category_list_item extends list_item {
         }
 
         $result = $this->item_html($extraargs).'&nbsp;'.(join($this->icons, ''));
-        $result .= $this->get_move_in_field_html($movedcatid);
         $result .= $this->get_move_to_field_html($movedcatid);
+        $result .= $this->get_move_in_field_html($movedcatid);
         $result .= (($childrenhtml !='')?("\n".$childrenhtml):'');
         return $result;
     }
@@ -278,7 +278,7 @@ class question_category_list_item extends list_item {
                     'movetocontext' => $this->parentlist->context->id,
                     'movein' => $this->id,
                     'sesskey' => sesskey()
-                )),array('style' => 'margin: 25px;'));
+                )), array('style' => 'margin: 25px;'));
         }
 
         return '';
@@ -747,9 +747,9 @@ class question_category_object {
                           WHERE
                               id <> :id AND
                               contextid = :contextid AND
-                              parent = :parent
+                              parent = 0
                           ORDER BY sortorder",
-                array('id' => $movedcatid, 'contextid' => $contextid, 'parent' => $movedcat->parent));
+                array('id' => $movedcatid, 'contextid' => $contextid));
 
             // Обновим контекст категории  и ее индекс порядка сортировки (равный 0), НЕ обновляем страницу.
             $this->update_category($movedcatid, '0,'.$contextid, $movedcat->name, $movedcat->info, FORMAT_HTML, 0, false);
@@ -780,6 +780,28 @@ class question_category_object {
 
             $this->update_category($movedcatid, $uppercat->parent.','.$contextid, $movedcat->name, $movedcat->info,
                 FORMAT_HTML, $uppercat->sortorder + 1, false);
+        }
+
+        if ($parentcatid) {
+            $parentcat = $DB->get_record('question_categories', array('id' => $parentcatid), '*', MUST_EXIST);
+
+            $DB->execute("SET @sort = 0");     // Инициализируем переменную для сортировки.
+
+            // Обновляем индексы порядка сортировки всех записей в списке данного родителя данного контекста ...
+            // ... в том же порядке, что они и были изначально, только теперь они с 1 и до N.
+            $DB->execute("UPDATE
+                              {question_categories}
+                          SET
+                              sortorder = @sort := @sort + 1
+                          WHERE
+                              id <> :id AND
+                              contextid = :contextid AND
+                              parent = :parent
+                          ORDER BY sortorder",
+                array('id' => $movedcatid, 'contextid' => $parentcat->contextid, 'parent' => $parentcatid));
+
+            // Обновим контекст категории  и ее индекс порядка сортировки (равный 0), НЕ обновляем страницу.
+            $this->update_category($movedcatid, $parentcatid.','.$contextid, $movedcat->name, $movedcat->info, FORMAT_HTML, 0, false);
         }
 
         redirect($this->pageurl);
