@@ -755,6 +755,31 @@ class question_category_object {
             $this->update_category($movedcatid, '0,'.$contextid, $movedcat->name, $movedcat->info, FORMAT_HTML, 0, false);
         }
 
+        if($uppercatid) {
+            $uppercat = $DB->get_record('question_categories', array('id' => $uppercatid), '*', MUST_EXIST);
+
+            $DB->execute("SET @sort = :sort", array('sort' => $uppercat->sortorder + 1));
+
+            $DB->execute("UPDATE
+                              {question_categories}
+                          SET
+                              sortorder = @sort := @sort + 1
+                          WHERE
+                              id <> :id AND
+                              sortorder >= :sortorder AND
+                              contextid = :contextid AND
+                              parent = :parent
+                          ORDER BY sortorder",
+                array(
+                    'id' => $uppercatid,
+                    'sortorder' => $uppercat->sortorder,
+                    'contextid' => $uppercat->contextid,
+                    'parent' => $uppercat->parent));
+
+            $this->update_category($movedcatid, $uppercat->parent.','.$contextid, $movedcat->name, $movedcat->info,
+                FORMAT_HTML, $uppercat->sortorder + 1, false);
+        }
+
         redirect($this->pageurl);
     }
 
