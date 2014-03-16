@@ -157,22 +157,6 @@ class question_category_list extends moodle_list {
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class question_category_list_item extends list_item {
-
-    /**
-     * Override the constructor.
-     * @param mixed $item fragment of html for list item or record
-     * @param object $parent reference to parent of this item
-     * @param string $attributes attributes for li tag
-     * @param boolean $display whether this item is displayed. Some items may be loaded so we have a complete
-     *                              structure in memory to work with for actions but are not displayed.
-     * @return list_item
-     */
-    public function __construct($item, $parent, $attributes = '', $display = true) {
-        parent::__construct($item, $parent, $attributes, $display);
-
-        $this->children->context = $parent->context;    // Передадим потомкам контекст.
-    }
-
     /**
      * Set icons to category in the list.
      */
@@ -908,20 +892,4 @@ class question_category_object {
             $list->cancel_movement_mode();
         }
     }
-}
-
-/**
- * Отладочная печать указанной переменной с указанным сообщением
- * @param $smth Какая-то переменная, содержимое которой надо вывести
- * @param string $msg Поясняющее сообшение для вывода данных переменной
- */
-function pre_print($smth, $msg="") {
-
-    if ($msg != "") { echo "===== ".$msg.": =====<br/><br/>"; }
-
-    ?>
-        <pre>
-            <?print_r($smth);?>
-        </pre>
-    <?
 }
