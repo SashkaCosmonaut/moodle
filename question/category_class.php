@@ -758,7 +758,7 @@ class question_category_object {
     public function on_move_to_context($movedcatid, $contextid, $movedcatname, $movedcatinfo) {
         global $DB;
 
-        $DB->execute("SET @sort = 0");     // Инициализируем переменную для сортировки.
+        $DB->execute("SET @sort = 0");     // Инициализируем переменную для сортировки, индексы начнутся с 1 (sort + 1).
 
         // Обновляем индексы порядка сортировки всех записей в списке данного родителя данного контекста ...
         // ... в том же порядке, что они и были изначально, только теперь они с 1 и до N.
@@ -788,34 +788,58 @@ class question_category_object {
         global $DB;
 
         // Получсаем из БД вышестоящую категорию.
-        $uppercat = $DB->get_record('question_categories', array('id' => $uppercatid), '*', MUST_EXIST);
+        $uppercat = null;   // Категория, стоящая над перемещаемой, т.е. вышестоящая категория.
+        $nextcatid = 0;     // Идентификатор категории, стоящей следующей за вышестоящей категорией.
 
-        // Индексы порядка для категорий будут начинаться с индекса вышестоящей категории + 1.
-        $DB->execute("SET @sort = :sort", array('sort' => $uppercat->sortorder + 1));
+        foreach($this->editlists as $list) {
+            $listrecords = $list->records;
+
+            if (array_key_exists($uppercatid, $listrecords)) {  // Если в данном списке находится вышестоящая категория.
+                foreach ($listrecords as $record) {
+                    // Если уже нашли вышестоящую категорию, то следующая за ней категория с тем же родителем - "Следующая".
+                    if (!$nextcatid && $uppercat && $uppercat->parent == $record->parent) {
+                        $nextcatid = $record->id;
+                        break;  // Во избежание лишних итераций цикла
+                    }
+
+                    if ($record->id == $uppercatid) {   // Сохраняем вышестоящую категорию.
+                        $uppercat = $record;
+                    }
+                }
+                break;  // Во избежание лишних итераций цикла
+            }
+        }
+
+        if ($uppercat == null) {    // Если вышестоящую категорию не нашли, значит что-то не так, перемещать не будем.
+            return;
+        }
+
+        // Индексы порядка для категорий будут начинаться 0.
+        $DB->execute("SET @sort = -1");
 
         // Обновляем индексы порядка всех категорий, что после вышестоящей категории.
         $DB->execute("UPDATE
                           {question_categories}
                       SET
-                          sortorder = @sort := @sort + 1
+                          sortorder = @sort := IF (id <> :nextcatid, @sort + 1, @sort + 2)
                       WHERE
                           id <> :id AND
-                          id <> :movedcatid AND
-                          sortorder >= :sortorder AND
                           contextid = :contextid AND
                           parent = :parent
                       ORDER BY sortorder",
             array(
-                'id' => $uppercatid,
-                'movedcatid' => $movedcatid,
-                'sortorder' => $uppercat->sortorder,
+                'nextcatid' => $nextcatid,
+                'id' => $movedcatid,
                 'contextid' => $uppercat->contextid,
                 'parent' => $uppercat->parent));
+
+        // Получаем новое значение индекса сортировки вышестоящей категории.
+        $uppercatdortorder = $DB->get_field('question_categories', 'sortorder', array('id' => $uppercatid), MUST_EXIST);
 
         // Обновим родителя и контекст перемещаемой категории, а индекс порядка сортировки у нее равен индексу ...
         // ... вышестоящей категории + 1, НЕ обновляем страницу.
         $this->update_category($movedcatid, $uppercat->parent.','.$uppercat->contextid, $movedcatname, $movedcatinfo,
-            FORMAT_HTML, $uppercat->sortorder + 1, false);
+            FORMAT_HTML, $uppercatdortorder + 1, false);
     }
 
     /**
@@ -831,7 +855,7 @@ class question_category_object {
         // Получсаем из БД родительскую категорию.
         $parentcat = $DB->get_record('question_categories', array('id' => $parentcatid), '*', MUST_EXIST);
 
-        $DB->execute("SET @sort = 0");     // Инициализируем переменную для сортировки.
+        $DB->execute("SET @sort = 0");     // Инициализируем переменную для сортировки, индексы начнутся с 1 (sort + 1).
 
         // Обновляем индексы порядка сортировки всех записей в списке данного родителя данного контекста ...
         // ... в том же порядке, что они и были изначально, только теперь они с 1 и до N.
