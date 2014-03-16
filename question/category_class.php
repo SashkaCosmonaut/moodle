@@ -728,17 +728,7 @@ class question_category_object {
 
         require_sesskey();
 
-        $movedcat = null;      // Родительская категория для перемещаемой категори.
-
-        // Ищем родительскую категорию в списках категрий.
-        foreach($this->editlists as $list) {
-            if (array_key_exists($movedcatid, $list->records)) {
-                $movedcat = $list->records[$movedcatid];
-                break;  // Во избежание лишних итераций цикла.
-            }
-        }
-
-        if (!$movedcat) {   // Если родительскую категорию не нашли, значит что-то не так, перемещать не будем.
+        if (!$movedcat = $this->get_category($movedcatid)) {   // Ищем в списках категорий перемещаемую категорию.
             return;
         }
 
@@ -755,6 +745,20 @@ class question_category_object {
         }
 
         redirect($this->pageurl);
+    }
+
+    /**
+     * Найти категорию в списках категорий по указанному идентификатору.
+     * @param $id Идентификатор искомой категории.
+     * @return Искомая категория, или null, если категорию с таким идентификатором не нашли.
+     */
+    public function get_category($id){
+        foreach($this->editlists as $list) {
+            if (array_key_exists($id, $list->records)) {
+                return $list->records[$id];
+            }
+        }
+        return null;
     }
 
     /**
@@ -861,17 +865,7 @@ class question_category_object {
     public function on_move_in($movedcatid, $parentcatid, $movedcatname, $movedcatinfo) {
         global $DB;
 
-        $parentcat = null;      // Родительская категория для перемещаемой категори.
-
-        // Ищем родительскую категорию в списках категрий.
-        foreach($this->editlists as $list) {
-            if (array_key_exists($parentcatid, $list->records)) {
-                $parentcat = $list->records[$parentcatid];
-                break;  // Во избежание лишних итераций цикла.
-            }
-        }
-
-        if (!$parentcat) {   // Если родительскую категорию не нашли, значит что-то не так, перемещать не будем.
+        if (!$parentcat = $this->get_category($parentcatid)) {   // Ищем в списках категорий родительскую категорию.
             return;
         }
 
