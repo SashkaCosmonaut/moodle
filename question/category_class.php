@@ -74,7 +74,7 @@ class question_category_list extends moodle_list {
      *
      * @param integer $indent depth of indentation.
      */
-    public function to_html($indent=0, $extraargs=array(), $movedcatid) {
+    public function to_html($indent=0, $extraargs=array(), $movedcatid = 0) {
         if (count($this->items)) {
             $tabs = str_repeat("\t", $indent);
             $html = '';
@@ -160,7 +160,7 @@ class question_category_list_item extends list_item {
     /**
      * Set icons to category in the list.
      */
-    public function set_icon_html(){
+    public function set_icon_html($first = 0, $last = 0, $lastitem = 0){
         $category = $this->item;
         $url = new moodle_url('/question/category.php', ($this->parentlist->pageurl->params() + array('edit'=>$category->id)));
         $this->icons['edit']= $this->image_icon(get_string('editthiscategory', 'question'), $url, 'edit');
@@ -213,7 +213,7 @@ class question_category_list_item extends list_item {
      *                            may be used by sub class.
      * @return string html
      */
-    public function to_html($indent = 0, $extraargs = array(), $movedcatid) {
+    public function to_html($indent = 0, $extraargs = array(), $movedcatid = 0) {
         if (!$this->display) {
             return '';
         }
