@@ -810,7 +810,7 @@ class question_category_object {
             }
         }
 
-        if ($uppercat == null) {    // Если вышестоящую категорию не нашли, значит что-то не так, перемещать не будем.
+        if (!$uppercat) {    // Если вышестоящую категорию не нашли, значит что-то не так, перемещать не будем.
             return;
         }
 
@@ -852,8 +852,19 @@ class question_category_object {
     public function on_move_in($movedcatid, $parentcatid, $movedcatname, $movedcatinfo) {
         global $DB;
 
-        // Получсаем из БД родительскую категорию.
-        $parentcat = $DB->get_record('question_categories', array('id' => $parentcatid), '*', MUST_EXIST);
+        $parentcat = null;      // Родительская категория для перемещаемой категори.
+
+        // Ищем родительскую категорию в списках категрий.
+        foreach($this->editlists as $list) {
+            if (array_key_exists($parentcatid, $list->records)) {
+                $parentcat = $list->records[$parentcatid];
+                break;  // Во избежание лишних итераций цикла.
+            }
+        }
+
+        if (!$parentcat) {   // Если родительскую категорию не нашли, значит что-то не так, перемещать не будем.
+            return;
+        }
 
         $DB->execute("SET @sort = 0");     // Инициализируем переменную для сортировки, индексы начнутся с 1 (sort + 1).
 
