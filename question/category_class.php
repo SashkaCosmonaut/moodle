@@ -722,16 +722,25 @@ class question_category_object {
      * @param $parentcatid Идентификатор новой родительской категории для перемещаемой категории.
      */
     public function try_move_finish($movedcatid, $contextid, $uppercatid, $parentcatid) {
-        global $DB;
-
         if (!($movedcatid)) {   // Если нет перемещаемой категории, то нет и перемещения.
             return;
         }
 
         require_sesskey();
 
-        // Получаем из БД перемещаемую категорию.
-        $movedcat = $DB->get_record('question_categories', array('id' => $movedcatid), '*', MUST_EXIST);
+        $movedcat = null;      // Родительская категория для перемещаемой категори.
+
+        // Ищем родительскую категорию в списках категрий.
+        foreach($this->editlists as $list) {
+            if (array_key_exists($movedcatid, $list->records)) {
+                $movedcat = $list->records[$movedcatid];
+                break;  // Во избежание лишних итераций цикла.
+            }
+        }
+
+        if (!$movedcat) {   // Если родительскую категорию не нашли, значит что-то не так, перемещать не будем.
+            return;
+        }
 
         if ($contextid) {       // Если нужно переместить категорию на вершину списка в другом контексте.
             $this->on_move_to_context($movedcatid, $contextid, $movedcat->name, $movedcat->info);
@@ -799,7 +808,7 @@ class question_category_object {
                     // Если уже нашли вышестоящую категорию, то следующая за ней категория с тем же родителем - "Следующая".
                     if (!$nextcatid && $uppercat && $uppercat->parent == $record->parent) {
                         $nextcatid = $record->id;
-                        break;  // Во избежание лишних итераций цикла
+                        break;  // Когда нашли вышестоящую категорию и идентификатор следующей останавливаемся.
                     }
 
                     if ($record->id == $uppercatid) {   // Сохраняем вышестоящую категорию.
