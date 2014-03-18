@@ -600,7 +600,25 @@ class question_category_object {
         $cat->name = $newcategory;
         $cat->info = $newinfo;
         $cat->infoformat = $newinfoformat;
-        $cat->sortorder = 999;
+
+        $maxsortorder = 0;  // Наибольший индекс порядка сортировки в данном контексте у данного родителя.
+
+        foreach($this->editlists as $list) {    // Перебираем все имеющиеся списки.
+            // Смотрим первую категорию, если ее контекст не равен контексту добавляемой категории, пропускаем весь список.
+            if ($list->records[array_keys($list->records)[0]]->contextid != $contextid) {
+                continue;
+            }
+
+            foreach ($list->records as $record) {   // Перебираем категории в списке.
+                // Если родитель равен родителю добавляемой категории и данная категория является последней.
+                if ($record->parent == $parentid && $record->sortorder > $maxsortorder) {
+                    $maxsortorder = $record->sortorder;
+                }
+            }
+        }
+
+        // Если максимальный индекс изменился, прибавляем 1 и присваиваем, иначе категория вставляется первой, ее индекс - 0.
+        $cat->sortorder = $maxsortorder ? $maxsortorder + 1 : 0;
         $cat->stamp = make_unique_id_code();
         $categoryid = $DB->insert_record("question_categories", $cat);
         if ($return) {
@@ -892,4 +910,20 @@ class question_category_object {
             $list->cancel_movement_mode();
         }
     }
+}
+
+/**
+ * Отладочная печать указанной переменной с указанным сообщением
+ * @param $smth Какая-то переменная, содержимое которой надо вывести
+ * @param string $msg Поясняющее сообшение для вывода данных переменной
+ */
+function pre_print($smth, $msg="") {
+
+    if ($msg != "") { echo "===== ".$msg.": =====<br/><br/>"; }
+
+    ?>
+    <pre>
+            <?print_r($smth);?>
+        </pre>
+<?
 }
