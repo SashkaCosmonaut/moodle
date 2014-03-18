@@ -773,22 +773,18 @@ class question_category_object {
     public function on_move_to_context($movedcatid, $contextid, $movedcatname, $movedcatinfo) {
         global $DB;
 
-        $DB->execute("SET @sort = 0");     // Инициализируем переменную для сортировки, индексы начнутся с 1 (sort + 1).
-
-        // Обновляем индексы порядка сортировки всех записей в списке данного родителя данного контекста ...
-        // ... в том же порядке, что они и были изначально, только теперь они с 1 и до N.
+        // Инкрементируем индекс порядка сортировки всех записей данного контекста у данного родителя.
         $DB->execute("UPDATE
                           {question_categories}
                       SET
-                          sortorder = @sort := @sort + 1
+                          sortorder = sortorder + 1
                       WHERE
-                          id <> :id AND
                           contextid = :contextid AND
-                          parent = 0
+                          parent = :parentid
                       ORDER BY sortorder",
-            array('id' => $movedcatid, 'contextid' => $contextid));
+            array('contextid' => $contextid, 'parentid' => 0));
 
-        // Обновим контекст категории и ее индекс порядка сортировки (равный 0), НЕ обновляем страницу.
+        // Обновим контекст категории, а ее индекс порядка сортировки устанавливаем в 0, НЕ обновляем страницу.
         $this->update_category($movedcatid, '0,'.$contextid, $movedcatname, $movedcatinfo, FORMAT_HTML, 0, false);
     }
 
