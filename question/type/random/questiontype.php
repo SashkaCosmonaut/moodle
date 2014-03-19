@@ -222,18 +222,13 @@ class qtype_random extends question_type {
      * @param array        $excludedquestions of question ids. We will no pick any question whose id is in this list.
      * @param bool         $allowshuffle      if false, then any shuffle option on the selected quetsion is disabled.
      * @param null|integer $forcequestionid   if not null then force the picking of question with id $forcequestionid.
-     * @param null|array   $prevattemptsusageids  if not null then previous attempts will be considered in the question selection.
      * @throws coding_exception
      * @return question_definition|null the definition of the question that was
      *      selected, or null if no suitable question could be found.
      */
-    public function choose_other_question($questiondata, $excludedquestions, $allowshuffle = true,
-                                          $forcequestionid = null, $prevattemptsusageids = null) {
-        global $DB;
-
-        $categoryid = $questiondata->category;
-
-        $available = $this->get_available_questions_from_category($categoryid, !empty($questiondata->questiontext));
+    public function choose_other_question($questiondata, $excludedquestions, $allowshuffle = true, $forcequestionid = null) {
+        $available = $this->get_available_questions_from_category($questiondata->category,
+                !empty($questiondata->questiontext));
         shuffle($available);
 
         if ($forcequestionid !== null) {
@@ -246,47 +241,8 @@ class qtype_random extends question_type {
             }
         }
 
-        $usedqidsamonuts = array();   // Array with identifiers of used questions.
-
-        if ($prevattemptsusageids) {
-            // Create arrays of SQL query parameters to use with 'IN' statement.
-            list($sqlquids, $paramquids) = $DB->get_in_or_equal($prevattemptsusageids, SQL_PARAMS_NAMED);
-
-            // SQL query for obtaining the used questions ids and amounts of their uses.
-            $query = "
-                    SELECT
-                        qa.questionid,
-                        COUNT(*)
-
-                    FROM {question_attempts} qa
-                    JOIN {question} qn ON qn.id = qa.questionid
-
-                    WHERE qn.category = :categoryid AND
-                        qa.questionusageid $sqlquids
-                    GROUP BY qa.questionid";
-
-            $usedqidsamonuts = $DB->get_records_sql_menu($query,
-                array_merge(array('categoryid' => $categoryid), $paramquids));
-        }
-
-        $questionsandcategories = $DB->get_records_menu('question', array( // Get all questions ids of the current category.
-            'category'  => $categoryid,
-            'parent'    => 0));
-
-        foreach ($excludedquestions as $eq) {
-            if (array_key_exists($eq, $questionsandcategories)) { // If there is a question of the current category...
-                $usedqidsamonuts[$eq] = PHP_INT_MAX;              // ... set its amount of uses to maximum so it won't be chosen.
-            }
-        }
-
-        $minamount = min(array_values($usedqidsamonuts));   // Get the minimum amount of uses.
-
         foreach ($available as $questionid) {
-            $isqidused = array_key_exists($questionid, $usedqidsamonuts);   // Is the ID of this question used?
-            $areavailableqidsexist = count($available) > count($usedqidsamonuts);   // Are there the never used questions?
-            $isqidlessused = $usedqidsamonuts[$questionid] != $minamount;   // Is this question used the minimum amount of times?
-
-            if ($usedqidsamonuts && $isqidused && ($areavailableqidsexist || $isqidlessused)) {
+            if (in_array($questionid, $excludedquestions)) {
                 continue;
             }
 
@@ -294,7 +250,6 @@ class qtype_random extends question_type {
             $this->set_selected_question_name($question, $questiondata->name);
             return $question;
         }
-
         return null;
     }
 
