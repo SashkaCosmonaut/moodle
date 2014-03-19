@@ -764,6 +764,29 @@ class question_category_object {
     }
 
     /**
+     * Инкрементировать порядок сортировки категорий в списке.
+     * @param $contextid Контекст данных категорий.
+     * @param $parentid Родитель данных категорий (0 - верхний уровень, без родителя).
+     * @param $startsortorder С какого порядка сортировки начинать (-1 - все категории, начиная с нуля).
+     */
+    public function increment_categories_sortorder($contextid, $parentid = 0, $startsortorder = -1) {
+        global $DB;
+        $DB->execute("UPDATE
+                          {question_categories}
+                      SET
+                          sortorder = sortorder + 1
+                      WHERE
+                          sortorder > :sortorder AND
+                          contextid = :contextid AND
+                          parent = :parentid
+                      ORDER BY sortorder",
+            array(
+                'sortorder' => $startsortorder,
+                'contextid' => $contextid,
+                'parentid' => $parentid));
+    }
+
+    /**
      * Переместить категорию в другой контекст.
      * @param $movedcatid Идентификатор перемещаемой категории.
      * @param $contextid Идентификатор контекста, куда категория перемещается.
@@ -771,18 +794,8 @@ class question_category_object {
      * @param $movedcatinfo Информация перемещаемой категории.
      */
     public function on_move_to_context($movedcatid, $contextid, $movedcatname, $movedcatinfo) {
-        global $DB;
-
-        // Инкрементируем порядок сортировки всех категорий данного контекста у данного родителя.
-        $DB->execute("UPDATE
-                          {question_categories}
-                      SET
-                          sortorder = sortorder + 1
-                      WHERE
-                          contextid = :contextid AND
-                          parent = :parentid
-                      ORDER BY sortorder",
-            array('contextid' => $contextid, 'parentid' => 0));
+        // Инкрементируем порядок сортировки всех категорий данного контекста без родителя.
+        $this->increment_categories_sortorder($contextid);
 
         // Обновим контекст категории, а ее индекс порядка сортировки устанавливаем в 0, НЕ обновляем страницу.
         $this->update_category($movedcatid, '0,'.$contextid, $movedcatname, $movedcatinfo, FORMAT_HTML, 0, false);
@@ -796,27 +809,13 @@ class question_category_object {
      * @param $movedcatinfo Информация перемещаемой категории.
      */
     public function on_move_after($movedcatid, $uppercatid, $movedcatname, $movedcatinfo) {
-        global $DB;
-
         // Ищем в списках категорий вышестоящую категорию над перемещаемой категорией.
         if (!$uppercat = $this->get_category($uppercatid)) {
             return;
         }
 
-        // Инкрементируем индекс порядка сортировки категорий, следующих за вышестоящей в данном контексте у данного родителя.
-        $DB->execute("UPDATE
-                          {question_categories}
-                      SET
-                          sortorder = sortorder + 1
-                      WHERE
-                          sortorder > :sortorder AND
-                          contextid = :contextid AND
-                          parent = :parentid
-                      ORDER BY sortorder",
-            array(
-                'sortorder' => $uppercat->sortorder,
-                'contextid' => $uppercat->contextid,
-                'parentid' => $uppercat->parent));
+        // Инкрементируем порядок сортировки категорий, следующих за вышестоящей, в данном контексте у данного родителя.
+        $this->increment_categories_sortorder($uppercat->contextid, $uppercat->parent, $uppercat->sortorder);
 
         // Ставим перемещаемую категорию за вышестоящей в данном контексте у данного родителя.
         $this->update_category($movedcatid, $uppercat->parent.','.$uppercat->contextid, $movedcatname, $movedcatinfo,
@@ -831,22 +830,12 @@ class question_category_object {
      * @param $movedcatinfo Информация перемещаемой категории.
      */
     public function on_move_in($movedcatid, $parentcatid, $movedcatname, $movedcatinfo) {
-        global $DB;
-
         if (!$parentcat = $this->get_category($parentcatid)) {   // Ищем в списках категорий родительскую категорию.
             return;
         }
 
         // Инкрементируем порядок сортировки всех категорий данного контекста у данного родителя.
-        $DB->execute("UPDATE
-                          {question_categories}
-                      SET
-                          sortorder = sortorder + 1
-                      WHERE
-                          contextid = :contextid AND
-                          parent = :parentid
-                      ORDER BY sortorder",
-            array('contextid' => $parentcat->contextid, 'parentid' => $parentcatid));
+        $this->increment_categories_sortorder($parentcat->contextid, $parentcatid);
 
         // Обновим контекст категории, ее родителя и ее индекс порядка сортировки (равный 0), НЕ обновляем страницу.
         $this->update_category($movedcatid, $parentcatid.','.$parentcat->contextid, $movedcatname, $movedcatinfo,
