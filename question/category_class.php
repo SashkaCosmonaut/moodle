@@ -624,7 +624,7 @@ class question_category_object {
         $cat->info = $newinfo;
         $cat->infoformat = $newinfoformat;
 
-        $maxsortorder = 0;  // Наибольший индекс порядка сортировки в данном контексте у данного родителя.
+        $maxsortorder = null;  // Наибольший индекс порядка сортировки в данном контексте у данного родителя.
 
         foreach($this->editlists as $list) {    // Перебираем все имеющиеся списки.
             // Смотрим первую категорию, если ее контекст не равен контексту добавляемой категории, пропускаем весь список.
@@ -641,7 +641,7 @@ class question_category_object {
         }
 
         // Если максимальный индекс изменился, прибавляем 1 и присваиваем, иначе категория вставляется первой, ее индекс - 0.
-        $cat->sortorder = $maxsortorder ? $maxsortorder + 1 : 0;
+        $cat->sortorder = !is_null($maxsortorder) ? $maxsortorder + 1 : 0;
         $cat->stamp = make_unique_id_code();
         $categoryid = $DB->insert_record("question_categories", $cat);
         if ($return) {
