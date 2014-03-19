@@ -160,6 +160,8 @@ function quiz_create_attempt(quiz $quizobj, $attemptnumber, $lastattempt, $timen
  */
 function quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $timenow,
                                 $questionids = array(), $forcedvariantsbyslot = array()) {
+    global $DB, $USER;
+
     // Fully load all the questions in this quiz.
     $quizobj->preload_questions();
     $quizobj->load_questions();
@@ -181,8 +183,17 @@ function quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $time
                 $forcequestionid = $questionids[$quba->next_slot_number()];
             }
 
+            // Get the array with unique ids of attempts of current quiz and current user.
+            $prevattemptsuids = $DB->get_records_menu('quiz_attempts', array(
+                'quiz'      => $quizobj->get_quizid(),
+                'userid'    => $USER->id,
+                'preview'   => 0,
+                'state'     => 'finished'),
+                null, 'uniqueid');
+
             $question = question_bank::get_qtype('random')->choose_other_question(
-                $questiondata, $questionsinuse, $quizobj->get_quiz()->shuffleanswers, $forcequestionid);
+                $questiondata, $questionsinuse, $quizobj->get_quiz()->shuffleanswers, $forcequestionid,
+                array_keys($prevattemptsuids));
             if (is_null($question)) {
                 throw new moodle_exception('notenoughrandomquestions', 'quiz',
                                            $quizobj->view_url(), $questiondata);
