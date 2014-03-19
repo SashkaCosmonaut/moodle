@@ -165,12 +165,35 @@ class question_category_list_item extends list_item {
         $url = new moodle_url('/question/category.php', ($this->parentlist->pageurl->params() + array('edit'=>$category->id)));
         $this->icons['edit']= $this->image_icon(get_string('editthiscategory', 'question'), $url, 'edit');
 
-        // Generate url for the link of the icon and set this icon.
-        $url = new moodle_url($this->parentlist->pageurl, array(
-            'move'=>$this->id,
-            'sesskey'=>sesskey()
-        ),'move'.$this->parentlist->context->id);
-        $this->icons['move'] = $this->image_icon(get_string('movecategory','question'), $url, 'dragdrop', 'i');
+        if ($this->can_move()) {
+            // Generate url for the link of the icon and set this icon.
+            $url = new moodle_url($this->parentlist->pageurl, array(
+                'move'=>$this->id,
+                'sesskey'=>sesskey()
+            ),'move'.$this->parentlist->context->id);
+            $this->icons['move'] = $this->image_icon(get_string('movecategory','question'), $url, 'dragdrop', 'i');
+        }
+    }
+
+    /*
+     * Проверка, может ли категория быть перемещена.
+     */
+    public function can_move() {
+        if (!$this->parentlist->records) { // Если это не элемент верхнего уровня, то его точно можно двигать.
+            return true;
+        }
+
+        $count = 0; // Количество категорий в списке верхнего уровня.
+        foreach ($this->parentlist->records as $record) {
+            if ($record->parent == 0) {
+                $count++;
+            }
+            if ($count > 1) {   // Если нашли более 1 категории в списке верхнего уровня
+               break;
+            }
+        }
+
+        return $count > 1; // Если категория в списке верхнего уровня только 1, то перемещать ее нельзя.
     }
 
     public function item_html($extraargs = array()){
