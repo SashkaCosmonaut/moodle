@@ -773,7 +773,7 @@ class question_category_object {
     public function on_move_to_context($movedcatid, $contextid, $movedcatname, $movedcatinfo) {
         global $DB;
 
-        // Инкрементируем индекс порядка сортировки всех записей данного контекста у данного родителя.
+        // Инкрементируем индекс порядка сортировки всех категорий данного контекста у данного родителя.
         $DB->execute("UPDATE
                           {question_categories}
                       SET
@@ -798,59 +798,29 @@ class question_category_object {
     public function on_move_after($movedcatid, $uppercatid, $movedcatname, $movedcatinfo) {
         global $DB;
 
-        // Получсаем из БД вышестоящую категорию.
-        $uppercat = null;   // Категория, стоящая над перемещаемой, т.е. вышестоящая категория.
-        $nextcatid = 0;     // Идентификатор категории, стоящей следующей за вышестоящей категорией.
-
-        foreach($this->editlists as $list) {
-            $listrecords = $list->records;
-
-            if (array_key_exists($uppercatid, $listrecords)) {  // Если в данном списке находится вышестоящая категория.
-                foreach ($listrecords as $record) {
-                    // Если уже нашли вышестоящую категорию, то следующая за ней категория с тем же родителем - "Следующая".
-                    if (!$nextcatid && $uppercat && $uppercat->parent == $record->parent) {
-                        $nextcatid = $record->id;
-                        break;  // Когда нашли вышестоящую категорию и идентификатор следующей останавливаемся.
-                    }
-
-                    if ($record->id == $uppercatid) {   // Сохраняем вышестоящую категорию.
-                        $uppercat = $record;
-                    }
-                }
-                break;  // Во избежание лишних итераций цикла
-            }
-        }
-
-        if (!$uppercat) {    // Если вышестоящую категорию не нашли, значит что-то не так, перемещать не будем.
+        // Ищем в списках категорий вышестоящую категорию над перемещаемой категорией.
+        if (!$uppercat = $this->get_category($uppercatid)) {
             return;
         }
 
-        // Индексы порядка для категорий будут начинаться 0.
-        $DB->execute("SET @sort = -1");
-
-        // Обновляем индексы порядка всех категорий, что после вышестоящей категории.
+        // Инкрементируем индекс порядка сортировки категорий, следующих за вышестоящей в данном контексте у данного родителя.
         $DB->execute("UPDATE
                           {question_categories}
                       SET
-                          sortorder = @sort := IF (id <> :nextcatid, @sort + 1, @sort + 2)
+                          sortorder = sortorder + 1
                       WHERE
-                          id <> :id AND
+                          sortorder > :sortorder AND
                           contextid = :contextid AND
-                          parent = :parent
+                          parent = :parentid
                       ORDER BY sortorder",
             array(
-                'nextcatid' => $nextcatid,
-                'id' => $movedcatid,
+                'sortorder' => $uppercat->sortorder,
                 'contextid' => $uppercat->contextid,
-                'parent' => $uppercat->parent));
+                'parentid' => $uppercat->parent));
 
-        // Получаем новое значение индекса сортировки вышестоящей категории.
-        $uppercatdortorder = $DB->get_field('question_categories', 'sortorder', array('id' => $uppercatid), MUST_EXIST);
-
-        // Обновим родителя и контекст перемещаемой категории, а индекс порядка сортировки у нее равен индексу ...
-        // ... вышестоящей категории + 1, НЕ обновляем страницу.
+        // Ставим перемещаемую категорию за вышестоящей в данном контексте у данного родителя.
         $this->update_category($movedcatid, $uppercat->parent.','.$uppercat->contextid, $movedcatname, $movedcatinfo,
-            FORMAT_HTML, $uppercatdortorder + 1, false);
+            FORMAT_HTML, $uppercat->sortorder + 1, false);
     }
 
     /**
