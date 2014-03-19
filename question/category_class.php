@@ -758,15 +758,15 @@ class question_category_object {
         }
 
         if ($contextid) {       // Если нужно переместить категорию на вершину списка в другом контексте.
-            $this->on_move_to_context($movedcatid, $contextid, $movedcat->name, $movedcat->info);
+            $this->on_move_to_context($movedcat, $contextid);
         }
 
         if($uppercatid) {       // Если нужно переместить категорию под другой категорией.
-            $this->on_move_after($movedcatid, $uppercatid, $movedcat->name, $movedcat->info);
+            $this->on_move_after($movedcat, $uppercatid);
         }
 
         if ($parentcatid) {     // Если нужно переместить категорию в другую категорию.
-            $this->on_move_in($movedcatid, $parentcatid, $movedcat->name, $movedcat->info);
+            $this->on_move_in($movedcat, $parentcatid);
         }
 
         redirect($this->pageurl);
@@ -787,17 +787,25 @@ class question_category_object {
     }
 
     /**
-     * Инкрементировать порядок сортировки категорий в списке.
+     * Инкрементировать или декрементировать порядок сортировки категорий в списке.
      * @param $contextid Контекст данных категорий.
      * @param $parentid Родитель данных категорий (0 - верхний уровень, без родителя).
      * @param $startsortorder С какого порядка сортировки начинать (-1 - все категории, начиная с нуля).
+     * @param $decrement Надо ли делать декремент.
      */
-    public function increment_categories_sortorder($contextid, $parentid = 0, $startsortorder = -1) {
+    public function inc_dec_categories_sortorder($contextid, $parentid = 0, $startsortorder = -1, $decrement = false) {
         global $DB;
+
+        $sortorderstr = 'sortorder = sortorder + 1';    // По умолчанию - инкремент
+
+        if ($decrement) {
+            $sortorderstr = 'sortorder = sortorder - 1';
+        }
+
         $DB->execute("UPDATE
                           {question_categories}
                       SET
-                          sortorder = sortorder + 1
+                          $sortorderstr
                       WHERE
                           sortorder > :sortorder AND
                           contextid = :contextid AND
@@ -816,12 +824,15 @@ class question_category_object {
      * @param $movedcatname Название перемещаемой категории.
      * @param $movedcatinfo Информация перемещаемой категории.
      */
-    public function on_move_to_context($movedcatid, $contextid, $movedcatname, $movedcatinfo) {
+    public function on_move_to_context($movedcat, $contextid) {
         // Инкрементируем порядок сортировки всех категорий данного контекста без родителя.
-        $this->increment_categories_sortorder($contextid);
+        $this->inc_dec_categories_sortorder($contextid);
+
+        // Декрементируем порядок сортировки категорий, стоящих за перемещаемой.
+        $this->inc_dec_categories_sortorder($movedcat->contextid, $movedcat->parent, $movedcat->sortorder, true);
 
         // Обновим контекст категории, а ее индекс порядка сортировки устанавливаем в 0, НЕ обновляем страницу.
-        $this->update_category($movedcatid, '0,'.$contextid, $movedcatname, $movedcatinfo, FORMAT_HTML, 0, false);
+        $this->update_category($movedcat->id, '0,'.$contextid, $movedcat->name, $movedcat->info, FORMAT_HTML, 0, false);
     }
 
     /**
@@ -831,17 +842,20 @@ class question_category_object {
      * @param $movedcatname Название перемещаемой категории.
      * @param $movedcatinfo Информация перемещаемой категории.
      */
-    public function on_move_after($movedcatid, $uppercatid, $movedcatname, $movedcatinfo) {
+    public function on_move_after($movedcat, $uppercatid) {
         // Ищем в списках категорий вышестоящую категорию над перемещаемой категорией.
         if (!$uppercat = $this->get_category($uppercatid)) {
             return;
         }
 
         // Инкрементируем порядок сортировки категорий, следующих за вышестоящей, в данном контексте у данного родителя.
-        $this->increment_categories_sortorder($uppercat->contextid, $uppercat->parent, $uppercat->sortorder);
+        $this->inc_dec_categories_sortorder($uppercat->contextid, $uppercat->parent, $uppercat->sortorder);
+
+        // Декрементируем порядок сортировки категорий, стоящих за перемещаемой.
+        $this->inc_dec_categories_sortorder($movedcat->contextid, $movedcat->parent, $movedcat->sortorder, true);
 
         // Ставим перемещаемую категорию за вышестоящей в данном контексте у данного родителя.
-        $this->update_category($movedcatid, $uppercat->parent.','.$uppercat->contextid, $movedcatname, $movedcatinfo,
+        $this->update_category($movedcat->id, $uppercat->parent.','.$uppercat->contextid, $movedcat->name, $movedcat->info,
             FORMAT_HTML, $uppercat->sortorder + 1, false);
     }
 
@@ -852,16 +866,19 @@ class question_category_object {
      * @param $movedcatname Название перемещаемой категории.
      * @param $movedcatinfo Информация перемещаемой категории.
      */
-    public function on_move_in($movedcatid, $parentcatid, $movedcatname, $movedcatinfo) {
+    public function on_move_in($movedcat, $parentcatid) {
         if (!$parentcat = $this->get_category($parentcatid)) {   // Ищем в списках категорий родительскую категорию.
             return;
         }
 
         // Инкрементируем порядок сортировки всех категорий данного контекста у данного родителя.
-        $this->increment_categories_sortorder($parentcat->contextid, $parentcatid);
+        $this->inc_dec_categories_sortorder($parentcat->contextid, $parentcatid);
+
+        // Декрементируем порядок сортировки категорий, стоящих за перемещаемой.
+        $this->inc_dec_categories_sortorder($movedcat->contextid, $movedcat->parent, $movedcat->sortorder, true);
 
         // Обновим контекст категории, ее родителя и ее индекс порядка сортировки (равный 0), НЕ обновляем страницу.
-        $this->update_category($movedcatid, $parentcatid.','.$parentcat->contextid, $movedcatname, $movedcatinfo,
+        $this->update_category($movedcat->id, $parentcatid.','.$parentcat->contextid, $movedcat->name, $movedcat->info,
             FORMAT_HTML, 0, false);
     }
 
