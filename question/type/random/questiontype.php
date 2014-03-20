@@ -280,14 +280,16 @@ class qtype_random extends question_type {
         }
 
         $minamount = min(array_values($usedqidsamonuts));   // Get the minimum amount of uses.
+        $areavailableqidsexist = count($available) > count($usedqidsamonuts);   // Are there never used questions?
 
         foreach ($available as $questionid) {
-            $isqidused = array_key_exists($questionid, $usedqidsamonuts);   // Is the ID of this question used?
-            $areavailableqidsexist = count($available) > count($usedqidsamonuts);   // Are there the never used questions?
-            $isqidlessused = $usedqidsamonuts[$questionid] != $minamount;   // Is this question used the minimum amount of times?
+            if ($usedqidsamonuts) {     // Are there used questions?
+                $isqidused = array_key_exists($questionid, $usedqidsamonuts);   // Is the ID of this question used?
+                $isqidlessused = $usedqidsamonuts[$questionid] != $minamount;   // Is this question used the minimum amount of times?
 
-            if ($usedqidsamonuts && $isqidused && ($areavailableqidsexist || $isqidlessused)) {
-                continue;
+                if ($isqidused && ($areavailableqidsexist || $isqidlessused)) {
+                    continue;
+                }
             }
 
             $question = question_bank::load_question($questionid, $allowshuffle);
