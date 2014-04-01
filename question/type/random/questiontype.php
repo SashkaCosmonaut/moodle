@@ -256,18 +256,21 @@ class qtype_random extends question_type {
             $query = "
                     SELECT
                         qa.questionid,
-                        COUNT(*)
+                        COUNT(*) as qcnt
 
                     FROM {question_attempts} qa
                     JOIN {question} qn ON qn.id = qa.questionid
 
                     WHERE qn.category = :categoryid AND
                         qa.questionusageid $sqlquids
-                    GROUP BY qa.questionid";
+                    GROUP BY qa.questionid
+                    ORDER BY qcnt";
 
             $usedqidsamonuts = $DB->get_records_sql_menu($query,
                 array_merge(array('categoryid' => $categoryid), $paramquids));
         }
+
+        pre_print($usedqidsamonuts, '$query');
 
         $questionsandcategories = $DB->get_records_menu('question', array( // Get all questions ids of the current category.
             'category'  => $categoryid,
@@ -278,6 +281,8 @@ class qtype_random extends question_type {
                 $usedqidsamonuts[$eq] = PHP_INT_MAX;              // ... set its amount of uses to maximum so it won't be chosen.
             }
         }
+
+        pre_print($excludedquestions, '$excludedquestions');
 
         $minamount = min(array_values($usedqidsamonuts));   // Get the minimum amount of uses.
         $areavailableqidsexist = count($available) > count($usedqidsamonuts);   // Are there never used questions?
@@ -303,4 +308,13 @@ class qtype_random extends question_type {
     public function get_random_guess_score($questiondata) {
         return null;
     }
+}
+
+function pre_print($smth, $msg="") {
+    if ($msg != "") { echo "===== ".$msg.": =====<br/><br/>"; }
+    ?>
+        <pre>
+            <?print_r($smth);?>
+        </pre>
+    <?
 }
