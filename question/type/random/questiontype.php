@@ -270,29 +270,38 @@ class qtype_random extends question_type {
                 array_merge(array('categoryid' => $categoryid), $paramquids));
         }
 
-        pre_print($usedqidsamonuts, '$query');
+        pre_print($usedqidsamonuts, '$usedqidsamonuts');
 
-        $questionsandcategories = $DB->get_records_menu('question', array( // Get all questions ids of the current category.
-            'category'  => $categoryid,
-            'parent'    => 0));
+//        $questionsandcategories = $DB->get_records_menu('question', array( // Get all questions ids of the current category.
+//            'category'  => $categoryid,
+//            'parent'    => 0));
+//
+//        foreach ($excludedquestions as $eq) {
+//            if (array_key_exists($eq, $questionsandcategories)) { // If there is a question of the current category...
+//                $usedqidsamonuts[$eq] = PHP_INT_MAX;              // ... set its amount of uses to maximum so it won't be chosen.
+//            }
+//        }
+//
+//        pre_print($excludedquestions, '$excludedquestions');
+//        $areavailableqidsexist = count($available) > count($usedqidsamonuts);   // Are there never used questions?
 
-        foreach ($excludedquestions as $eq) {
-            if (array_key_exists($eq, $questionsandcategories)) { // If there is a question of the current category...
-                $usedqidsamonuts[$eq] = PHP_INT_MAX;              // ... set its amount of uses to maximum so it won't be chosen.
-            }
-        }
-
-        pre_print($excludedquestions, '$excludedquestions');
 
         $minamount = min(array_values($usedqidsamonuts));   // Get the minimum amount of uses.
-        $areavailableqidsexist = count($available) > count($usedqidsamonuts);   // Are there never used questions?
+        $unusedqids = array_diff($available, array_keys($usedqidsamonuts));
+        $unexcludedqids = array_diff($unusedqids, $excludedquestions);
+        $areavailableqidsexist = !empty($unusedqids) && !empty($unexcludedqids);
+
+        pre_print($unusedqids, '$unusedqids11');
+        pre_print($unexcludedqids, '$unexcludedqids');
+        pre_print($areavailableqidsexist, '$areavailableqidsexist');
 
         foreach ($available as $questionid) {
             if ($usedqidsamonuts) {     // Are there used questions?
                 $isqidused = array_key_exists($questionid, $usedqidsamonuts);   // Is the ID of this question used?
                 $isqidlessused = $usedqidsamonuts[$questionid] != $minamount;   // Is this question used the minimum amount of times?
 
-                if ($isqidused && ($areavailableqidsexist || $isqidlessused)) {
+                if (in_array($questionid, $excludedquestions) ||
+                    $isqidused && ($areavailableqidsexist || $isqidlessused)) {
                     continue;
                 }
             }
