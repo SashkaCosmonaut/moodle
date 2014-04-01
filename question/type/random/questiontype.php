@@ -270,38 +270,22 @@ class qtype_random extends question_type {
                 array_merge(array('categoryid' => $categoryid), $paramquids));
         }
 
-        pre_print($usedqidsamonuts, '$usedqidsamonuts');
-
-//        $questionsandcategories = $DB->get_records_menu('question', array( // Get all questions ids of the current category.
-//            'category'  => $categoryid,
-//            'parent'    => 0));
-//
-//        foreach ($excludedquestions as $eq) {
-//            if (array_key_exists($eq, $questionsandcategories)) { // If there is a question of the current category...
-//                $usedqidsamonuts[$eq] = PHP_INT_MAX;              // ... set its amount of uses to maximum so it won't be chosen.
-//            }
-//        }
-//
-//        pre_print($excludedquestions, '$excludedquestions');
-//        $areavailableqidsexist = count($available) > count($usedqidsamonuts);   // Are there never used questions?
-
-
         $minamount = min(array_values($usedqidsamonuts));   // Get the minimum amount of uses.
-        $unusedqids = array_diff($available, array_keys($usedqidsamonuts));
-        $unexcludedqids = array_diff($unusedqids, $excludedquestions);
-        $areavailableqidsexist = !empty($unusedqids) && !empty($unexcludedqids);
 
-        pre_print($unusedqids, '$unusedqids11');
-        pre_print($unexcludedqids, '$unexcludedqids');
-        pre_print($areavailableqidsexist, '$areavailableqidsexist');
+        $unusedqids = array_diff($available, array_keys($usedqidsamonuts));      // Check if there are unused questions.
+        $unexcludedqids = array_diff($unusedqids, $excludedquestions);           // Check if there are not excluded questions.
+
+        // There are available questions, if there are unused questions and not excluded questions.
+        $areavailableqidsexist = !empty($unusedqids) && !empty($unexcludedqids);
 
         foreach ($available as $questionid) {
             if ($usedqidsamonuts) {     // Are there used questions?
                 $isqidused = array_key_exists($questionid, $usedqidsamonuts);   // Is the ID of this question used?
-                $isqidlessused = $usedqidsamonuts[$questionid] != $minamount;   // Is this question used the minimum amount of times?
+                $isqidlessused = $usedqidsamonuts[$questionid] == $minamount;   // Is this question used the minimum amount of times?
 
+                // If this question is excluded or it has been used and there are available questions or ...
                 if (in_array($questionid, $excludedquestions) ||
-                    $isqidused && ($areavailableqidsexist || $isqidlessused)) {
+                    $isqidused && ($areavailableqidsexist || !$isqidlessused)) { // this question has been used frequently.
                     continue;
                 }
             }
@@ -317,13 +301,4 @@ class qtype_random extends question_type {
     public function get_random_guess_score($questiondata) {
         return null;
     }
-}
-
-function pre_print($smth, $msg="") {
-    if ($msg != "") { echo "===== ".$msg.": =====<br/><br/>"; }
-    ?>
-        <pre>
-            <?print_r($smth);?>
-        </pre>
-    <?
 }
