@@ -261,10 +261,13 @@ class qtype_random extends question_type {
                     FROM {question_attempts} qa
                     JOIN {question} qn ON qn.id = qa.questionid
 
-                    WHERE qn.category = :categoryid AND
+                    WHERE
+                        qn.category = :categoryid AND
+                        qn.parent = 0 AND
+                        qn.hidden = 0 AND
                         qa.questionusageid $sqlquids
                     GROUP BY qa.questionid
-                    ORDER BY qcnt";
+                    ORDER BY qcnt ASC";
 
             $usedqidsamonuts = $DB->get_records_sql_menu($query,
                 array_merge(array('categoryid' => $categoryid), $paramquids));
